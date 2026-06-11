@@ -121,15 +121,14 @@ const BannerProductsTable = () => {
               <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold text-center w-20 sm:w-24">Foto</th>
               <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold">Nombre del Producto</th>
               <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold">Descripción</th>
-              <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold">Precio con Descuento</th>
-              <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold">Descuento</th>
+              <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold">Precio</th>
               <th className="py-3 sm:py-4 px-3 sm:px-6 font-bold text-center">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {banners.length === 0 ? (
               <tr>
-                <td colSpan="6" className="text-center py-12 text-gray-400">
+                <td colSpan="5" className="text-center py-12 text-gray-400">
                   No hay productos en el banner
                 </td>
               </tr>
@@ -142,7 +141,6 @@ const BannerProductsTable = () => {
                   <td className="py-2 sm:py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm">{banner.idProducto?.nombre || 'Sin nombre'}</td>
                   <td className="py-2 sm:py-3 px-3 sm:px-6 text-gray-600 truncate max-w-[150px] sm:max-w-[200px] text-xs sm:text-sm">{banner.idProducto?.descripcion || ''}</td>
                   <td className="py-2 sm:py-3 px-3 sm:px-6 font-medium text-gray-800 text-xs sm:text-sm">${banner.idProducto?.precio || 0}</td>
-                  <td className="py-2 sm:py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm">--</td>
                   <td className="py-2 sm:py-3 px-3 sm:px-6">
                     <div className="flex justify-center items-center gap-1 sm:gap-2">
                       <button onClick={() => openEditModal(banner)} className="bg-[#5b8cff] text-white p-1.5 sm:p-2.5 rounded-lg hover:bg-blue-600"><Upload size={16} /></button>

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import DataSummary from '../components/DataSummary';
 import OrdersTable from '../components/TableSales';
 import BannerProductsTable from '../components/BannerProductsTable';
 import CategoryFilter from '../components/CategoryFilter';
@@ -20,7 +19,6 @@ const App = () => {
       <main className="flex-grow w-full max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-10">
         {currentView === 'dashboard' ? (
           <>
-            <DataSummary />
             <OrdersTable />
             <BannerProductsTable />
           </>

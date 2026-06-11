@@ -15,6 +15,17 @@ const eliminarImagenCloudinary = async (publicId) => {
   }
 };
 
+// Helper para obtener campos faltantes
+const getMissingFields = (body, requiredFields) => {
+  const missing = [];
+  for (const field of requiredFields) {
+    if (!body[field] || (typeof body[field] === 'string' && body[field].trim() === '')) {
+      missing.push(field);
+    }
+  }
+  return missing;
+};
+
 // GET - Obtener todos los administradores (sin contraseña)
 administradoresController.getAllAdministradores = async (req, res) => {
   try {
@@ -43,11 +54,19 @@ administradoresController.getAdministradoresById = async (req, res) => {
 // POST - Crear administrador (con imágenes subidas a Cloudinary)
 administradoresController.insertAdministradores = async (req, res) => {
   try {
-    const { nombre, apellido, usuario, contraseña, sucursal, salario } = req.body;
+    // Ahora leemos 'password' en lugar de 'contraseña'
+    const { nombre, apellido, usuario, password, sucursal, salario } = req.body;
 
-    // Validar campos obligatorios
-    if (!nombre || !apellido || !usuario || !contraseña || !sucursal || !salario) {
-      return res.status(400).json({ message: "Todos los campos son obligatorios" });
+    // Lista de campos obligatorios (incluye 'password')
+    const requiredFields = ["nombre", "apellido", "usuario", "password", "sucursal", "salario"];
+    const missing = getMissingFields(req.body, requiredFields);
+
+    if (missing.length > 0) {
+      console.log("❌ Campos faltantes en creación de administrador:", missing.join(", "));
+      return res.status(400).json({
+        message: `Faltan los siguientes campos obligatorios: ${missing.join(", ")}`,
+        missingFields: missing,
+      });
     }
 
     // Verificar unicidad de usuario
@@ -56,8 +75,8 @@ administradoresController.insertAdministradores = async (req, res) => {
       return res.status(400).json({ message: "El nombre de usuario ya está en uso" });
     }
 
-    // Hashear contraseña
-    const hashedPassword = await bcrypt.hash(contraseña, 10);
+    // Hashear password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Procesar foto de perfil
     let fotoPerfilUrl = "";
@@ -80,7 +99,7 @@ administradoresController.insertAdministradores = async (req, res) => {
       nombre,
       apellido,
       usuario,
-      contraseña: hashedPassword,
+      contraseña: hashedPassword, // el modelo sigue usando 'contraseña'
       sucursal,
       DUI: duiImagenes,
       fotoPerfil: fotoPerfilUrl,
@@ -99,10 +118,27 @@ administradoresController.insertAdministradores = async (req, res) => {
 // PUT - Actualizar administrador (con eliminación de imágenes viejas)
 administradoresController.updateAdministradores = async (req, res) => {
   try {
-    const { nombre, apellido, usuario, contraseña, sucursal, salario } = req.body;
+    // Leemos 'password' en lugar de 'contraseña'
+    const { nombre, apellido, usuario, password, sucursal, salario } = req.body;
     const adminActual = await administradoresModel.findById(req.params.id);
     if (!adminActual) {
       return res.status(404).json({ message: "Administrador no encontrado" });
+    }
+
+    // Verificar si los campos enviados están vacíos (solo si vienen en el body)
+    const fieldsToCheck = { nombre, apellido, usuario, sucursal, salario };
+    const invalidFields = [];
+    for (const [key, value] of Object.entries(fieldsToCheck)) {
+      if (value !== undefined && value !== null && value.toString().trim() === '') {
+        invalidFields.push(key);
+      }
+    }
+    if (invalidFields.length > 0) {
+      console.log("❌ Campos inválidos (vacíos) en actualización:", invalidFields.join(", "));
+      return res.status(400).json({
+        message: `Los siguientes campos no pueden estar vacíos: ${invalidFields.join(", ")}`,
+        invalidFields,
+      });
     }
 
     // Verificar unicidad de usuario si cambia
@@ -121,9 +157,9 @@ administradoresController.updateAdministradores = async (req, res) => {
       salario: salario ? Number(salario) : adminActual.salario,
     };
 
-    // Actualizar contraseña si se envía
-    if (contraseña && contraseña.trim() !== "") {
-      updateData.contraseña = await bcrypt.hash(contraseña, 10);
+    // Actualizar contraseña si se envía (usando 'password')
+    if (password && password.trim() !== "") {
+      updateData.contraseña = await bcrypt.hash(password, 10); // se guarda en 'contraseña' del modelo
     }
 
     // Actualizar foto de perfil
@@ -137,7 +173,6 @@ administradoresController.updateAdministradores = async (req, res) => {
 
     // Actualizar imágenes DUI (reemplazo completo)
     if (req.files?.imagenesDUI?.length) {
-      // Eliminar las anteriores
       for (const dui of adminActual.DUI) {
         await eliminarImagenCloudinary(dui.public_id);
       }
@@ -146,7 +181,6 @@ administradoresController.updateAdministradores = async (req, res) => {
         public_id: file.filename,
       }));
     } else {
-      // Mantener las existentes si no se suben nuevas
       updateData.DUI = adminActual.DUI;
     }
 
@@ -171,12 +205,10 @@ administradoresController.deleteAdministradores = async (req, res) => {
       return res.status(404).json({ message: "Administrador no encontrado" });
     }
 
-    // Eliminar foto de perfil
     if (administrador.public_id_fotoPerfil) {
       await eliminarImagenCloudinary(administrador.public_id_fotoPerfil);
     }
 
-    // Eliminar cada imagen DUI
     for (const dui of administrador.DUI) {
       await eliminarImagenCloudinary(dui.public_id);
     }
@@ -192,7 +224,7 @@ administradoresController.deleteAdministradores = async (req, res) => {
 // GET - Búsqueda por nombre (query param)
 administradoresController.searchByNombre = async (req, res) => {
   try {
-    const { nombre } = req.query; // ← importante: usar query, no body
+    const { nombre } = req.query;
     if (!nombre) {
       return res.status(400).json({ message: "Debe proporcionar un nombre para buscar" });
     }
