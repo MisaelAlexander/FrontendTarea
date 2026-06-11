@@ -6,8 +6,8 @@ const TablePromotions = ({ promotions, onEdit, onDelete, onViewDetails, onAddNew
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredPromotions = promotions.filter(promo =>
-    promo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    promo.estado.toLowerCase().includes(searchTerm.toLowerCase())
+    (promo.nombre || 'Sin nombre').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (promo.estado || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -56,20 +56,26 @@ const TablePromotions = ({ promotions, onEdit, onDelete, onViewDetails, onAddNew
                   </tr>
                 ) : (
                   filteredPromotions.map((promo) => (
-                    <tr key={promo.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 border-r border-gray-200/50 font-medium whitespace-nowrap">{promo.nombre}</td>
+                    <tr key={promo.id || promo._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3 border-r border-gray-200/50 font-medium whitespace-nowrap">
+                        {promo.nombre || 'Sin nombre'}
+                      </td>
                       <td className="px-4 py-3 border-r border-gray-200/50 text-sm text-gray-600">
                         <div className="flex flex-wrap gap-1">
-                          {promo.productos.slice(0, 2).map(p => (
-                            <span key={p} className="bg-gray-100 px-2 py-0.5 rounded-full text-xs">{p}</span>
+                          {promo.productos.slice(0, 2).map((p, idx) => (
+                            <span key={idx} className="bg-gray-100 px-2 py-0.5 rounded-full text-xs">{p}</span>
                           ))}
                           {promo.productos.length > 2 && (
                             <span className="text-xs text-gray-400">+{promo.productos.length - 2}</span>
                           )}
                         </div>
-                       </td>
-                      <td className="px-4 py-3 border-r border-gray-200/50 text-center text-gray-600 whitespace-nowrap">{promo.fechaInicio}</td>
-                      <td className="px-4 py-3 border-r border-gray-200/50 text-center text-gray-600 whitespace-nowrap">{promo.fechaFin}</td>
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200/50 text-center text-gray-600 whitespace-nowrap">
+                        {promo.fechaInicio}
+                      </td>
+                      <td className="px-4 py-3 border-r border-gray-200/50 text-center text-gray-600 whitespace-nowrap">
+                        {promo.fechaFin}
+                      </td>
                       <td className="px-4 py-3 border-r border-gray-200/50 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                           promo.estado === 'Activa' ? 'bg-green-100 text-green-700' :
@@ -78,20 +84,20 @@ const TablePromotions = ({ promotions, onEdit, onDelete, onViewDetails, onAddNew
                         }`}>
                           {promo.estado}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => onEdit(promo)} className="p-1.5 bg-[#5c8eff] text-white rounded-lg hover:bg-blue-600 transition-colors" title="Editar">
                             <Upload size={16} />
                           </button>
-                          <button onClick={() => onDelete(promo.id, promo.nombre)} className="p-1.5 bg-[#2d3a8c] text-white rounded-lg hover:bg-red-800 transition-colors" title="Eliminar">
+                          <button onClick={() => onDelete(promo.id || promo._id, promo.nombre)} className="p-1.5 bg-[#2d3a8c] text-white rounded-lg hover:bg-red-800 transition-colors" title="Eliminar">
                             <Trash2 size={16} />
                           </button>
                           <button onClick={() => onViewDetails(promo)} className="bg-[#5c8eff] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors">
                             Ver más
                           </button>
                         </div>
-                       </td>
+                      </td>
                     </tr>
                   ))
                 )}

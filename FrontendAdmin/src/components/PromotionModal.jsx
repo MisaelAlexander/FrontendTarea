@@ -1,7 +1,6 @@
-// src/components/PromotionModal.jsx
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { ChevronDown, Calendar, X, Tag } from 'lucide-react';
+import { Calendar, X, Tag, Info } from 'lucide-react';
 
 const PromotionModal = ({ promotion, products, onSave, onClose }) => {
   const esEdicion = !!promotion;
@@ -9,27 +8,24 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     defaultValues: {
       nombre: promotion?.nombre || '',
-      productos: promotion?.productos || [],
+      productos: promotion?.rawProductos?.map(item => item.productos?._id || item.productos) || [],
       fechaInicio: promotion?.fechaInicio || '',
       fechaFin: promotion?.fechaFin || '',
       descuento: promotion?.descuento || '',
-      estado: promotion?.estado || 'Próxima'
     },
     mode: 'onChange'
   });
 
-  const productosSeleccionados = watch('productos', []);
+  const productosSeleccionados = watch('productos', []); // Array de IDs
   const [productoActual, setProductoActual] = useState('');
 
-  // Sincronizar si cambia la promoción desde afuera (edición)
   useEffect(() => {
     if (promotion) {
       setValue('nombre', promotion.nombre);
-      setValue('productos', promotion.productos || []);
+      setValue('productos', promotion.rawProductos?.map(item => item.productos?._id || item.productos) || []);
       setValue('fechaInicio', promotion.fechaInicio);
       setValue('fechaFin', promotion.fechaFin);
       setValue('descuento', promotion.descuento || '');
-      setValue('estado', promotion.estado || 'Próxima');
     }
   }, [promotion, setValue]);
 
@@ -40,8 +36,8 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
     }
   };
 
-  const eliminarProducto = (producto) => {
-    setValue('productos', productosSeleccionados.filter(p => p !== producto));
+  const eliminarProducto = (idProducto) => {
+    setValue('productos', productosSeleccionados.filter(id => id !== idProducto));
   };
 
   const onSubmit = (data) => {
@@ -50,27 +46,23 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
       return;
     }
 
-    // Calcular estado automático según fechas
-    const hoy = new Date();
-    const inicio = new Date(data.fechaInicio);
-    const fin = new Date(data.fechaFin);
-    let estado = 'Próxima';
-    if (hoy >= inicio && hoy <= fin) estado = 'Activa';
-    else if (hoy > fin) estado = 'Vencida';
-    else if (hoy < inicio) estado = 'Próxima';
-
+    // El estado se calcula automáticamente en base a las fechas, no se envía
     const nuevaPromocion = {
-      id: promotion?.id || Date.now(),
+      id: promotion?.id,
       nombre: data.nombre,
-      productos: data.productos,
+      productos: data.productos, // Array de IDs
       fechaInicio: data.fechaInicio,
       fechaFin: data.fechaFin,
-      descuento: data.descuento ? Number(data.descuento) : undefined,
-      estado
+      descuento: data.descuento ? Number(data.descuento) : undefined
     };
 
     onSave(nuevaPromocion);
     onClose();
+  };
+
+  const getProductName = (id) => {
+    const prod = products.find(p => p.id === id);
+    return prod ? prod.nombre : id;
   };
 
   return (
@@ -113,7 +105,7 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
               >
                 <option value="">Seleccionar producto...</option>
                 {products.map(p => (
-                  <option key={p} value={p}>{p}</option>
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
                 ))}
               </select>
               <button
@@ -155,14 +147,20 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
             </div>
             {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin.message}</p>}
           </div>
+        </div>
 
-          {/* Estado (solo lectura) */}
-          <div className="space-y-1">
-            <label className="block text-sm font-bold text-gray-700">Estado (automático)</label>
-            <div className="px-4 py-2 bg-gray-100 rounded-xl text-sm text-gray-600">
-              {watch('estado')}
-            </div>
-          </div>
+        {/* Mensaje sobre el estado automático */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+          <Info size={20} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-700">
+            El <strong>estado</strong> de la promoción se asigna automáticamente según las fechas indicadas:
+            <br />
+            <span className="inline-block mt-1">
+              <span className="font-medium">Activa</span> si la fecha actual está dentro del rango,
+              <span className="font-medium"> Próxima</span> si aún no ha comenzado, y
+              <span className="font-medium"> Vencida</span> si ya finalizó.
+            </span>
+          </p>
         </div>
 
         {/* Lista de productos seleccionados */}
@@ -175,12 +173,12 @@ const PromotionModal = ({ promotion, products, onSave, onClose }) => {
                 <p className="text-xs mt-1">Agrega productos desde la lista</p>
               </div>
             ) : (
-              productosSeleccionados.map(prod => (
-                <div key={prod} className="flex items-center gap-2 bg-white border border-gray-300 px-3 py-1 rounded-full text-sm shadow-sm">
-                  <span className="text-blue-600">#</span> {prod}
+              productosSeleccionados.map(id => (
+                <div key={id} className="flex items-center gap-2 bg-white border border-gray-300 px-3 py-1 rounded-full text-sm shadow-sm">
+                  <span className="text-blue-600">#</span> {getProductName(id)}
                   <button
                     type="button"
-                    onClick={() => eliminarProducto(prod)}
+                    onClick={() => eliminarProducto(id)}
                     className="text-red-500 hover:bg-red-100 rounded-full p-0.5 transition-colors"
                   >
                     <X size={14} />

@@ -1,44 +1,56 @@
-// src/components/OrdersTable.jsx
-import { useState } from 'react';
-import orders from '../data/sales';
-import Modal from './Modal'; // Asegúrate de tener el componente Modal
+import { useState, useEffect } from 'react';
+import Modal from './Modal';
 import OrderDetailModal from './OrderDetailModal';
+import { getPedidos } from '../hooks/pedidosApi';
 
 const OrdersTable = () => {
+  const [orders, setOrders] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const pedidos = await getPedidos();
+      // Transformamos para el formato que espera la tabla
+      const transformed = pedidos.map(pedido => ({
+        id: pedido._id,
+        cliente: pedido.idCarrito?.IDCliente?.nombre || 'Sin cliente',
+        productos: pedido.idCarrito?.Productos?.map(p => p.IDProducto?.nombre || 'Producto').join(', ') || 'Sin productos',
+        total: pedido.idCarrito?.totalConDescuento || pedido.idCarrito?.total || 0,
+        tipoPago: pedido.tipoPago || 'No especificado',
+        estado: pedido.estado || 'Pendiente', // puedes agregar este campo al modelo si quieres
+        raw: pedido // guardamos el objeto original para el modal
+      }));
+      setOrders(transformed);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
 
   const openOrderDetails = (order) => {
-    // Transforma tu pedido simple al formato que espera el modal
-    const enrichedOrder = {
-      id: order.id || Math.random(),
-      tipoPedido: "En línea",
-      fecha: order.fecha || new Date().toISOString().split('T')[0],
-      tipoPago: order.type,
-      comprador: order.client,
-      estado: order.status,
-      tipoRetiro: "Tienda",
-      descuento: 0,
-      total: parseFloat(order.total.replace('$', '')),
-      items: [
-        {
-          nombre: order.product,
-          cantidad: 1,
-          monto: parseFloat(order.total.replace('$', ''))
-        }
-      ]
-    };
-    setSelectedOrder(enrichedOrder);
+    setSelectedOrder(order);
     setIsModalOpen(true);
   };
+
+  const filteredOrders = orders.filter(o =>
+    o.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    o.productos.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="mb-12">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900">Pedidos</h2>
       <div className="mb-6 w-full sm:w-[400px]">
-        <input 
-          type="text" 
-          placeholder="Buscar Pedidos..." 
+        <input
+          type="text"
+          placeholder="Buscar Pedidos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full border-[3px] border-[#3eb3ff] rounded-xl py-2 px-5 outline-none focus:ring-2 focus:ring-blue-300 text-sm bg-white"
         />
       </div>
@@ -55,28 +67,35 @@ const OrdersTable = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {orders.map((order, index) => (
-              <tr key={index} className="hover:bg-gray-50 transition-colors">
-                <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm">{order.client}</td>
-                <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm">{order.product}</td>
-                <td className="py-2 sm:py-4 px-3 sm:px-6 font-medium text-xs sm:text-sm">{order.total}</td>
-                <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm">{order.type}</td>
-                <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm">{order.status}</td>
-                <td className="py-2 sm:py-4 px-3 sm:px-6 text-center">
-                  <button
-                    onClick={() => openOrderDetails(order)}
-                    className="bg-[#5b8cff] text-white px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold hover:bg-blue-600"
-                  >
-                    Ver más
-                  </button>
+            {filteredOrders.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="text-center py-12 text-gray-400">
+                  No hay pedidos registrados
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredOrders.map((order) => (
+                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm">{order.cliente}</td>
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm">{order.productos}</td>
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 font-medium text-xs sm:text-sm">${Number(order.total).toFixed(2)}</td>
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm">{order.tipoPago}</td>
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm">{order.estado}</td>
+                  <td className="py-2 sm:py-4 px-3 sm:px-6 text-center">
+                    <button
+                      onClick={() => openOrderDetails(order)}
+                      className="bg-[#5b8cff] text-white px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-semibold hover:bg-blue-600"
+                    >
+                      Ver más
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Modal flotante */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} maxWidth="max-w-5xl">
         <OrderDetailModal order={selectedOrder} onClose={() => setIsModalOpen(false)} />
       </Modal>

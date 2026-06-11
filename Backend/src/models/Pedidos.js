@@ -13,6 +13,7 @@ const PedidosSchema = new Schema(
   {
     timestamps: true,
     strict: false,
+    collection: "Pedidos",
   }
 );
 

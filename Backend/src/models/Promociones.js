@@ -34,6 +34,7 @@ const PromocionesSchema = new Schema(
   {
     timestamps: true,
     strict: false,
+    collection: "Promociones",
   }
 );
 

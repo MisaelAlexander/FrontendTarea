@@ -1,22 +1,17 @@
-// routes/bannerRoutes.js
 import express from "express";
+import upload from "../utils/cloudinaryConfig.js";
 import bannerController from "../controller/controllerBanner.js";
 
 const router = express.Router();
 
-// Obtener todos los banners
+const uploadFields = upload.fields([
+  { name: "FotoFondo", maxCount: 1 },
+]);
+
 router.get("/", bannerController.getAllBanners);
-
-// Obtener un banner por ID
 router.get("/:id", bannerController.getBannerById);
-
-// Insertar un nuevo banner
-router.post("/", bannerController.insertBanner);
-
-// Actualizar un banner existente
-router.put("/:id", bannerController.updateBanner);
-
-// Eliminar un banner
+router.post("/", uploadFields, bannerController.insertBanner);
+router.put("/:id", uploadFields, bannerController.updateBanner);
 router.delete("/:id", bannerController.deleteBanner);
 
 export default router;

@@ -33,6 +33,7 @@ const CarritoSchema = new Schema(
   {
     timestamps: true,
     strict: false,
+    collection: "Carrito",
   }
 );
 
