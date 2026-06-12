@@ -1,26 +1,39 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ← Cambia "react-router" a "react-router-dom"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Input from "../components/Input.jsx";
 import Button from "../components/Button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
 import { motion } from "framer-motion";
+import { requestCode } from "../hooks/recuperarContraseniaApi.js";
 
-export default function App() {
-  const navigate = useNavigate(); // ← Ejecuta el hook para obtener la función
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+export default function PaginaCorreo() {
+  const navigate = useNavigate();
+  const [correo, setCorreo] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setCorreo(e.target.value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Datos del formulario:", formData);
-    alert(`Registro enviado con: ${formData.email}`);
-    navigate("/codigo-correo"); // ← Ahora funciona
+    setError("");
+    if (!correo.trim()) {
+      setError("El campo de correo es obligatorio.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await requestCode(correo);   // ← envía 'correo'
+      alert(data.message);
+      navigate("/codigo-correo");
+    } catch (err) {
+      const mensaje = err.response?.data?.message || "Error al enviar el código. Intente de nuevo.";
+      setError(mensaje);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,25 +50,23 @@ export default function App() {
           <form onSubmit={handleSubmit}>
             <Input
               label="Email"
-              name="email"
+              name="correo"
               type="email"
               placeholder="Ingrese su correo"
-              value={formData.email}
+              value={correo}
               onChange={handleChange}
               required
             />
-            <div className="text-center mb-8">
-              <p className="text-gray-500 mt-1">
-                <a
-                  href="/login"
-                  className="text-[#1a365d] hover:underline decoration-2 underline-offset-2 decoration-[#0a1c33] transition-all active:text-[#0a1c33] font-medium"
-                >
-                  Volver al login
-                </a>
+            {error && <p className="text-red-500 text-sm mt-2 text-center">{error}</p>}
+            <div className="text-center mb-8 mt-4">
+              <p className="text-gray-500">
+                <a href="/login" className="text-[#1a365d] hover:underline ...">Volver al login</a>
               </p>
             </div>
             <div className="flex justify-center mt-4">
-              <Button type="submit">Avanzar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Enviando..." : "Avanzar"}
+              </Button>
             </div>
           </form>
         </div>

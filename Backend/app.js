@@ -67,10 +67,10 @@ app.use("/api/recuperar-admin", recuperarContraseniaRoutes);
  
 
 //CLIENTES
-app.use("/api/admin", administradoresRoutes);
-app.use("/api/login", loginAdminRoutes);
-app.use("/api/recuperar-admin", recuperarContraseniaRoutes);
-app.use("/api/recuperaregistrar-admin", registerClientesRoutes);
+app.use("/api/cliente", clientesRoutes);
+app.use("/api/login", loginClientesRoutes);
+app.use("/api/recuperar-cliente", recuperarClientesRoutes);
+app.use("/api/registrar-cliente", registerClientesRoutes);
 
 //BANNER
 app.use("/api/banner", bannerRoutes);

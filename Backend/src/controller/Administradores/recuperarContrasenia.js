@@ -1,9 +1,8 @@
-// controllers/recoveryPasswordAdminController.js
 import jsonwebtoken from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import HTMLRecoveryEmail from "../../models/Administradores.js";
+import HTMLRecoveryEmail from "../../utils/sendMailRecovery.js";
 
 import { config } from "../../../config.js";
 
@@ -11,17 +10,17 @@ import administradoresModel from "../../models/Administradores.js";
 
 const recoveryPasswordAdminController = {};
 
-// 1. Solicitar el código por correo electrónico (usando el campo 'usuario' como email)
+// 1. Solicitar el código por correo electrónico
 recoveryPasswordAdminController.requestCode = async (req, res) => {
   try {
-    const { usuario } = req.body; // 'usuario' contiene el correo electrónico
+    const { correo } = req.body; // ← ahora recibe 'correo'
 
-    // Validar que el usuario (correo) exista en la BD de administradores
-    const adminFound = await administradoresModel.findOne({ usuario });
+    // Buscar administrador cuyo campo 'usuario' sea igual al correo recibido
+    const adminFound = await administradoresModel.findOne({ correo: correo });
 
     if (!adminFound) {
-      // Por seguridad, no revelamos si existe o no, pero podemos devolver un mensaje genérico
-      return res.json({ message: "Si el correo existe, recibirás un código" });
+      // Por seguridad, no revelamos si existe o no
+      return res.json({ message: "No se ha encontrado tu correo" });
     }
 
     // Generar código aleatorio de 6 caracteres hexadecimales
@@ -29,7 +28,7 @@ recoveryPasswordAdminController.requestCode = async (req, res) => {
 
     // Guardar la información en un token JWT
     const token = jsonwebtoken.sign(
-      { email: usuario, code, userType: "admin", verified: false },
+      { email: correo, code, userType: "admin", verified: false },
       config.JWT.secret,
       { expiresIn: "15m" }
     );
@@ -48,7 +47,7 @@ recoveryPasswordAdminController.requestCode = async (req, res) => {
 
     const mailOptions = {
       from: config.email.user_email,
-      to: usuario,
+      to: correo,
       subject: "Recuperación de contraseña - Administrador",
       html: HTMLRecoveryEmail(code),
     };
@@ -61,9 +60,6 @@ recoveryPasswordAdminController.requestCode = async (req, res) => {
       }
       return res.status(200).json({ message: "Correo enviado" });
     });
-
-    // Nota: no se debe enviar respuesta después de sendMail porque ya se envía dentro del callback.
-    // Sin embargo, el callback ya retorna. Para evitar doble respuesta, quitamos el return de abajo.
   } catch (error) {
     console.log("Error en requestCode: " + error);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -75,7 +71,6 @@ recoveryPasswordAdminController.verifyCode = async (req, res) => {
   try {
     const { codeRequest } = req.body;
 
-    // Obtener el token de la cookie
     const token = req.cookies.recoveryCookieAdmin;
     if (!token) {
       return res.status(400).json({ message: "No hay solicitud de recuperación activa" });
@@ -83,12 +78,10 @@ recoveryPasswordAdminController.verifyCode = async (req, res) => {
 
     const decoded = jsonwebtoken.verify(token, config.JWT.secret);
 
-    // Comparar el código proporcionado con el almacenado en el token
     if (codeRequest !== decoded.code) {
       return res.status(400).json({ message: "Código inválido" });
     }
 
-    // Si el código es correcto, generar un nuevo token con el flag verified = true
     const newToken = jsonwebtoken.sign(
       { email: decoded.email, userType: "admin", verified: true },
       config.JWT.secret,
@@ -109,7 +102,6 @@ recoveryPasswordAdminController.newPassword = async (req, res) => {
   try {
     const { newPassword, confirmNewPassword } = req.body;
 
-    // Validar que ambas contraseñas coincidan
     if (newPassword !== confirmNewPassword) {
       return res.status(400).json({ message: "Las contraseñas no coinciden" });
     }
@@ -121,22 +113,18 @@ recoveryPasswordAdminController.newPassword = async (req, res) => {
 
     const decoded = jsonwebtoken.verify(token, config.JWT.secret);
 
-    // Verificar que el código haya sido verificado previamente
     if (!decoded.verified) {
       return res.status(400).json({ message: "El código aún no ha sido verificado" });
     }
 
-    // Encriptar la nueva contraseña
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // Actualizar la contraseña del administrador en la base de datos
     await administradoresModel.findOneAndUpdate(
-      { usuario: decoded.email },
+      { correo: decoded.email },
       { contraseña: passwordHash },
       { new: true }
     );
 
-    // Limpiar la cookie
     res.clearCookie("recoveryCookieAdmin");
 
     return res.status(200).json({ message: "Contraseña actualizada exitosamente" });

@@ -27,8 +27,9 @@ function Inventario() {
   const [alert, setAlert] = useState({ visible: false, type: 'success', message: '' });
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, productId: null, productName: '' });
 
-  // react-hook-form con todos los campos, incluyendo imagen
-  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+  // react-hook-form con validaciones mejoradas
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm({
+    mode: 'onChange', // validación en tiempo real
     defaultValues: {
       nombre: "",
       descripcion: "",
@@ -37,9 +38,9 @@ function Inventario() {
       sucursal: "",
       descuento: 0,
       colores: [],
-      imagenesPreview: [],     // solo para previsualización
-      nuevaImagen: null,       // archivo nuevo si se sube
-      eliminarImagen: false,   // flag para eliminar la imagen existente
+      imagenesPreview: [],
+      nuevaImagen: null,
+      eliminarImagen: false,
     }
   });
 
@@ -78,10 +79,30 @@ function Inventario() {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    
+    // Validación básica del archivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!validTypes.includes(file.type)) {
+      showAlert('error', 'Formato no válido. Usa JPG, PNG o WEBP.');
+      return;
+    }
+    
+    if (file.size > maxSize) {
+      showAlert('error', 'La imagen excede 5MB.');
+      return;
+    }
+    
     const preview = URL.createObjectURL(file);
     setValue("nuevaImagen", file);
     setValue("imagenesPreview", [preview]);
-    setValue("eliminarImagen", false); // si se sube nueva, se anula la eliminación
+    setValue("eliminarImagen", false);
+    // Limpiar error de imagen si existe
+    if (errors.nuevaImagen) {
+      // Forzar revalidación del campo
+      trigger('nuevaImagen');
+    }
   };
 
   // Eliminar la imagen existente (sin subir nueva)
@@ -89,13 +110,19 @@ function Inventario() {
     setValue("nuevaImagen", null);
     setValue("imagenesPreview", []);
     setValue("eliminarImagen", true);
+    // Revalidar campo imagen si estamos en modo agregar
+    if (activeModal === 'add') {
+      trigger('nuevaImagen');
+    }
   };
 
-  // Quitar la previsualización de la nueva imagen (sin afectar la existente)
+  // Quitar la previsualización de la nueva imagen
   const removeSelectedImagePreview = () => {
     setValue("nuevaImagen", null);
     setValue("imagenesPreview", []);
-    // No tocamos eliminarImagen aquí, porque si ya estaba en true se mantiene, si no, sigue false
+    if (activeModal === 'add') {
+      trigger('nuevaImagen');
+    }
   };
 
   // Colores
@@ -147,11 +174,21 @@ function Inventario() {
     setActiveModal('edit');
   };
 
+  // Validación personalizada para la imagen (obligatoria solo en modo agregar)
+  const validateImage = (value) => {
+    if (activeModal === 'add') {
+      if (!value && !watchEliminarImagen) {
+        return "Debes subir una imagen para el producto";
+      }
+    }
+    return true;
+  };
+
   // Guardar producto (POST o PUT)
   const saveProduct = async (formData) => {
     const data = new FormData();
-    data.append("nombre", formData.nombre);
-    data.append("descripcion", formData.descripcion || "");
+    data.append("nombre", formData.nombre.trim());
+    data.append("descripcion", formData.descripcion?.trim() || "");
     data.append("precio", formData.precio);
     data.append("stock", formData.stock);
     data.append("sucursal", formData.sucursal);
@@ -162,13 +199,17 @@ function Inventario() {
       formData.colores.forEach(color => data.append("colores", color));
     }
 
-    // Imágenes: prioridad a nueva imagen; si no, atender eliminarImagen
+    // Imágenes: validación extra por si falla la validación de react-hook-form
+    if (activeModal === 'add' && !formData.nuevaImagen) {
+      showAlert('error', 'Debes subir una imagen para el producto');
+      return;
+    }
+
     if (formData.nuevaImagen) {
       data.append("imagenesProductos", formData.nuevaImagen);
     } else if (formData.eliminarImagen) {
       data.append("removeImages", "true");
     }
-    // Si no hay nueva imagen ni eliminarImagen, no se envía nada sobre imágenes (se mantienen)
 
     try {
       if (activeModal === 'add') {
@@ -214,13 +255,15 @@ function Inventario() {
   const handleFormSubmit = (e) => {
     if (e.nativeEvent.submitter !== saveButtonRef.current) {
       e.preventDefault();
-      console.warn('Envío bloqueado porque no fue el botón Guardar.');
       return;
     }
     handleSubmit(saveProduct)(e);
   };
 
-  // Obtener la imagen actual del producto seleccionado (para mostrarla en edición)
+  // trigger para revalidar campos manualmente
+  const { trigger } = useForm();
+
+  // Obtener la imagen actual del producto seleccionado
   const currentProductImage = selectedProduct?.imagenesProductos?.[0];
 
   return (
@@ -277,7 +320,7 @@ function Inventario() {
 
       {/* MODAL AGREGAR / EDITAR */}
       <Modal isOpen={activeModal === 'add' || activeModal === 'edit'} onClose={() => setActiveModal(null)} maxWidth="max-w-5xl">
-        <form onSubmit={handleFormSubmit} className="p-10">
+        <form onSubmit={handleFormSubmit} className="p-10" noValidate>
           <h3 className="text-2xl font-bold mb-6">
             {activeModal === 'add' ? 'Nuevo Producto' : 'Editar Producto'}
           </h3>
@@ -287,19 +330,33 @@ function Inventario() {
               <div>
                 <label className="block text-sm font-bold mb-2">Nombre *</label>
                 <input
-                  {...register("nombre", { required: "El nombre es obligatorio" })}
-                  className="w-full px-5 py-3 border border-gray-300 rounded-2xl text-sm"
+                  {...register("nombre", { 
+                    required: "El nombre es obligatorio",
+                    minLength: { value: 3, message: "Mínimo 3 caracteres" },
+                    maxLength: { value: 100, message: "Máximo 100 caracteres" },
+                    setValueAs: (v) => v?.trim()
+                  })}
+                  className={`w-full px-5 py-3 border rounded-2xl text-sm transition-colors ${
+                    errors.nombre ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-blue-200'
+                  } focus:outline-none focus:ring-2`}
                 />
                 {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre.message}</p>}
               </div>
+              
               <div>
                 <label className="block text-sm font-bold mb-2">Descripción</label>
                 <textarea
                   rows="4"
-                  {...register("descripcion")}
-                  className="w-full px-5 py-4 border border-gray-300 rounded-2xl text-sm resize-none"
+                  {...register("descripcion", {
+                    maxLength: { value: 500, message: "Máximo 500 caracteres" }
+                  })}
+                  className={`w-full px-5 py-4 border rounded-2xl text-sm resize-none ${
+                    errors.descripcion ? 'border-red-500' : 'border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-200`}
                 />
+                {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion.message}</p>}
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold mb-2 text-center">Precio ($) *</label>
@@ -311,7 +368,9 @@ function Inventario() {
                       min: { value: 0.01, message: "Debe ser mayor a 0" },
                       valueAsNumber: true,
                     })}
-                    className="w-full p-3 border border-gray-300 rounded-xl text-center"
+                    className={`w-full p-3 border rounded-xl text-center ${
+                      errors.precio ? 'border-red-500' : 'border-gray-300'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-200`}
                   />
                   {errors.precio && <p className="text-red-500 text-xs mt-1">{errors.precio.message}</p>}
                 </div>
@@ -323,17 +382,23 @@ function Inventario() {
                       required: "Stock requerido",
                       min: { value: 0, message: "No puede ser negativo" },
                       valueAsNumber: true,
+                      validate: (value) => Number.isInteger(value) || "Debe ser un número entero"
                     })}
-                    className="w-full p-3 border border-gray-300 rounded-xl text-center"
+                    className={`w-full p-3 border rounded-xl text-center ${
+                      errors.stock ? 'border-red-500' : 'border-gray-300'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-200`}
                   />
                   {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock.message}</p>}
                 </div>
               </div>
+              
               <div>
                 <label className="block text-sm font-bold mb-2">Sucursal *</label>
                 <select
                   {...register("sucursal", { required: "Selecciona una sucursal" })}
-                  className="w-full px-5 py-3 border border-gray-300 rounded-2xl text-sm"
+                  className={`w-full px-5 py-3 border rounded-2xl text-sm ${
+                    errors.sucursal ? 'border-red-500' : 'border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-200`}
                 >
                   <option value="">Seleccionar sucursal</option>
                   <option value="Merliot">Merliot</option>
@@ -342,17 +407,21 @@ function Inventario() {
                 </select>
                 {errors.sucursal && <p className="text-red-500 text-xs mt-1">{errors.sucursal.message}</p>}
               </div>
+              
               <div>
                 <label className="block text-sm font-bold mb-2">Descuento (%)</label>
                 <input
                   type="number"
                   {...register("descuento", {
-                    min: 0,
-                    max: 100,
+                    min: { value: 0, message: "Mínimo 0%" },
+                    max: { value: 100, message: "Máximo 100%" },
                     valueAsNumber: true,
                   })}
-                  className="w-full px-5 py-3 border border-gray-300 rounded-2xl text-sm"
+                  className={`w-full px-5 py-3 border rounded-2xl text-sm ${
+                    errors.descuento ? 'border-red-500' : 'border-gray-300'
+                  } focus:outline-none focus:ring-2 focus:ring-blue-200`}
                 />
+                {errors.descuento && <p className="text-red-500 text-xs mt-1">{errors.descuento.message}</p>}
               </div>
 
               {/* Selector de colores */}
@@ -395,9 +464,9 @@ function Inventario() {
             {/* Columna derecha: imágenes */}
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold mb-4">Imagen del Producto</label>
+                <label className="block text-sm font-bold mb-4">Imagen del Producto {activeModal === 'add' && <span className="text-red-500">*</span>}</label>
 
-                {/* Mostrar imagen actual SOLO si estamos en edición, existe imagen, no hay nueva y no se pidió eliminar */}
+                {/* Mostrar imagen actual SOLO en edición */}
                 {activeModal === 'edit' && currentProductImage && !watchNuevaImagen && !watchEliminarImagen && (
                   <div className="mb-4">
                     <p className="text-xs font-semibold text-gray-500 mb-2">Imagen actual:</p>
@@ -429,26 +498,35 @@ function Inventario() {
                 {/* Zona de subida de nueva imagen */}
                 <div
                   onClick={() => fileInputRef.current.click()}
-                  className="border-2 border-dashed border-gray-300 rounded-[2rem] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 hover:border-blue-300 transition-all"
+                  className={`border-2 border-dashed rounded-[2rem] p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                    errors.nuevaImagen 
+                      ? 'border-red-400 bg-red-50 hover:bg-red-100' 
+                      : 'border-gray-300 hover:bg-gray-50 hover:border-blue-300'
+                  }`}
                 >
-                  <CloudUpload size={60} className="text-gray-300 mb-4" />
-                  <p className="text-sm font-bold text-gray-600">Subir una imagen</p>
-                  <p className="text-[10px] text-gray-400 mt-2">JPG, PNG o WEBP (Máx. 5MB)</p>
+                  <CloudUpload size={60} className={errors.nuevaImagen ? 'text-red-400' : 'text-gray-300'} />
+                  <p className="text-sm font-bold text-gray-600 mt-2">Subir una imagen</p>
+                  <p className="text-[10px] text-gray-400 mt-1">JPG, PNG o WEBP (Máx. 5MB)</p>
                   <input
                     type="file"
                     ref={fileInputRef}
                     className="hidden"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleImageUpload}
                   />
                 </div>
+                
+                {/* Error de imagen */}
+                {errors.nuevaImagen && (
+                  <p className="text-red-500 text-xs mt-2">{errors.nuevaImagen.message}</p>
+                )}
 
                 {/* Previsualización de la nueva imagen seleccionada */}
                 {watchImagenesPreview && watchImagenesPreview.length > 0 && (
                   <div className="flex flex-wrap gap-3 mt-4">
                     {watchImagenesPreview.map((preview, idx) => (
                       <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border group shadow-sm">
-                        <img src={preview} className="w-full h-full object-cover" alt="" />
+                        <img src={preview} className="w-full h-full object-cover" alt="Preview" />
                         <button
                           type="button"
                           onClick={removeSelectedImagePreview}
@@ -465,15 +543,20 @@ function Inventario() {
           </div>
 
           <div className="mt-12 flex justify-end gap-6">
-            <button type="button" onClick={() => setActiveModal(null)} className="px-10 py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200">
+            <button 
+              type="button" 
+              onClick={() => setActiveModal(null)} 
+              className="px-10 py-4 bg-gray-100 text-gray-600 font-bold rounded-2xl hover:bg-gray-200 transition"
+            >
               Cancelar
             </button>
             <button
               ref={saveButtonRef}
               type="submit"
-              className="px-14 py-4 bg-[#2d3a8c] text-white font-bold rounded-2xl shadow-lg hover:bg-[#1e275e] transition-all"
+              disabled={isSubmitting}
+              className="px-14 py-4 bg-[#2d3a8c] text-white font-bold rounded-2xl shadow-lg hover:bg-[#1e275e] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {activeModal === 'add' ? 'Registrar Producto' : 'Actualizar Producto'}
+              {isSubmitting ? 'Guardando...' : (activeModal === 'add' ? 'Registrar Producto' : 'Actualizar Producto')}
             </button>
           </div>
         </form>
@@ -497,7 +580,7 @@ function Inventario() {
                 <p className="text-sm text-gray-500 mb-4">Sucursal: {selectedProduct.sucursal}</p>
                 <p className="text-sm text-gray-500 mb-4">Descuento: {selectedProduct.descuento || 0}%</p>
                 <div className="bg-gray-50 rounded-2xl p-6 mb-8">
-                  <p className="text-sm text-gray-600">{selectedProduct.descripcion}</p>
+                  <p className="text-sm text-gray-600">{selectedProduct.descripcion || "Sin descripción"}</p>
                 </div>
                 <div className="space-y-4">
                   <p className="text-xs font-bold uppercase text-gray-800">Colores</p>
@@ -511,13 +594,16 @@ function Inventario() {
                         <span className="text-[9px] font-mono uppercase text-gray-400">{c}</span>
                       </div>
                     ))}
+                    {(!selectedProduct.colores || selectedProduct.colores.length === 0) && (
+                      <p className="text-xs text-gray-400">No especificados</p>
+                    )}
                   </div>
                 </div>
                 <p className="mt-4 text-sm">Stock: {selectedProduct.stock} uds.</p>
               </div>
             </div>
             <div className="flex justify-end bg-white p-6 rounded-[2rem] border shadow-sm">
-              <button onClick={() => setActiveModal(null)} className="px-16 py-4 bg-[#2d3a8c] text-white rounded-2xl font-bold">
+              <button onClick={() => setActiveModal(null)} className="px-16 py-4 bg-[#2d3a8c] text-white rounded-2xl font-bold hover:bg-[#1e275e] transition">
                 Cerrar
               </button>
             </div>

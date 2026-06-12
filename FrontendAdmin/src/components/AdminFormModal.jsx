@@ -9,10 +9,11 @@ const AdminFormModal = ({ admin, onClose, onSave }) => {
     defaultValues: {
       nombre: admin?.nombre || '',
       apellido: admin?.apellido || '',
+      correo: admin?.correo || '',
       usuario: admin?.usuario || '',
       sucursal: admin?.sucursal || '',
       salario: admin?.salario || '',
-      password: '', // campo de contraseña (en el form se llama password)
+      password: '',
       fotoPerfilPreview: admin?.fotoPerfil || null,
       duiFrontalPreview: admin?.DUI?.[0]?.imagenDUI || null,
       duiTraseraPreview: admin?.DUI?.[1]?.imagenDUI || null,
@@ -43,17 +44,17 @@ const AdminFormModal = ({ admin, onClose, onSave }) => {
 
     formData.append('nombre', safe(data.nombre));
     formData.append('apellido', safe(data.apellido));
+    formData.append('correo', safe(data.correo));
     formData.append('usuario', safe(data.usuario));
     formData.append('sucursal', safe(data.sucursal));
     formData.append('salario', safe(data.salario));
 
-    // Contraseña: se envía como 'password' (el backend lo espera así ahora)
     if (!esEdicion) {
       if (!data.password || data.password.trim() === '') {
         console.error('❌ Error: contraseña vacía en creación');
         return;
       }
-      formData.append('password', data.password); // <-- ahora 'password'
+      formData.append('password', data.password);
     } else {
       if (data.password && data.password.trim() !== '') {
         formData.append('password', data.password);
@@ -98,6 +99,21 @@ const AdminFormModal = ({ admin, onClose, onSave }) => {
               />
               {errors.sucursal && <p className="text-red-500 text-xs">{errors.sucursal.message}</p>}
             </div>
+            <div>
+              <label className="block text-sm font-bold mb-2">Correo electrónico *</label>
+              <input
+                type="email"
+                {...register('correo', {
+                  required: 'El correo es obligatorio',
+                  pattern: {
+                    value: /^\S+@\S+\.\S+$/,
+                    message: 'Correo electrónico inválido'
+                  }
+                })}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl"
+              />
+              {errors.correo && <p className="text-red-500 text-xs">{errors.correo.message}</p>}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -125,7 +141,7 @@ const AdminFormModal = ({ admin, onClose, onSave }) => {
           </div>
         </div>
 
-        {/* Imágenes DUI y perfil */}
+        {/* Imágenes DUI y perfil (sin cambios) */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-bold mb-4">

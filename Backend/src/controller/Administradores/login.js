@@ -12,13 +12,13 @@ adminAuthController.login = async (req, res) => {
     // Buscar administrador por nombre de usuario
     const admin = await AdministradoresModel.findOne({ usuario });
     if (!admin) {
-      return res.status(401).json({ message: "Usuario o contraseña incorrectos 1" + usuario });
+      return res.status(401).json({ message: "Usuario o contraseña incorrectos" });
     }
 
     // Comparar la contraseña ingresada con la hasheada en la BD
     const passwordValida = await bcrypt.compare(contraseña, admin.contraseña);
     if (!passwordValida) {
-      return res.status(401).json({ message: "Usuario o contraseña incorrectos 2" });
+      return res.status(401).json({ message: "Usuario o contraseña incorrectos" });
     }
 
     // Crear cookie (httpOnly, segura, con tiempo de expiración)

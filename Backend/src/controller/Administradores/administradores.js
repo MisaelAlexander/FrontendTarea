@@ -54,25 +54,29 @@ administradoresController.getAdministradoresById = async (req, res) => {
 // POST - Crear administrador (con imágenes subidas a Cloudinary)
 administradoresController.insertAdministradores = async (req, res) => {
   try {
-    // Ahora leemos 'password' en lugar de 'contraseña'
-    const { nombre, apellido, usuario, password, sucursal, salario } = req.body;
+    //   Incluir 'correo' en la desestructuración
+    const { nombre, apellido, usuario, password, sucursal, salario, correo } = req.body;
 
-    // Lista de campos obligatorios (incluye 'password')
-    const requiredFields = ["nombre", "apellido", "usuario", "password", "sucursal", "salario"];
+    //   Lista de campos obligatorios (incluye 'correo')
+    const requiredFields = ["nombre", "apellido", "usuario", "password", "sucursal", "salario", "correo"];
     const missing = getMissingFields(req.body, requiredFields);
 
     if (missing.length > 0) {
-      console.log("❌ Campos faltantes en creación de administrador:", missing.join(", "));
+      console.log("   Campos faltantes en creación de administrador:", missing.join(", "));
       return res.status(400).json({
         message: `Faltan los siguientes campos obligatorios: ${missing.join(", ")}`,
         missingFields: missing,
       });
     }
 
-    // Verificar unicidad de usuario
-    const existe = await administradoresModel.findOne({ usuario });
-    if (existe) {
+    //   Verificar unicidad de usuario y correo
+    const existeUsuario = await administradoresModel.findOne({ usuario });
+    if (existeUsuario) {
       return res.status(400).json({ message: "El nombre de usuario ya está en uso" });
+    }
+    const existeCorreo = await administradoresModel.findOne({ correo });
+    if (existeCorreo) {
+      return res.status(400).json({ message: "El correo electrónico ya está en uso" });
     }
 
     // Hashear password
@@ -95,11 +99,13 @@ administradoresController.insertAdministradores = async (req, res) => {
       }));
     }
 
+    //   Agregar 'correo' al objeto del nuevo administrador
     const newAdmin = new administradoresModel({
       nombre,
       apellido,
       usuario,
-      contraseña: hashedPassword, // el modelo sigue usando 'contraseña'
+      contraseña: hashedPassword,
+      correo,                   // <-- ahora se incluye
       sucursal,
       DUI: duiImagenes,
       fotoPerfil: fotoPerfilUrl,
@@ -118,15 +124,15 @@ administradoresController.insertAdministradores = async (req, res) => {
 // PUT - Actualizar administrador (con eliminación de imágenes viejas)
 administradoresController.updateAdministradores = async (req, res) => {
   try {
-    // Leemos 'password' en lugar de 'contraseña'
-    const { nombre, apellido, usuario, password, sucursal, salario } = req.body;
+    //   Incluir 'correo' en la desestructuración
+    const { nombre, apellido, usuario, password, sucursal, salario, correo } = req.body;
     const adminActual = await administradoresModel.findById(req.params.id);
     if (!adminActual) {
       return res.status(404).json({ message: "Administrador no encontrado" });
     }
 
-    // Verificar si los campos enviados están vacíos (solo si vienen en el body)
-    const fieldsToCheck = { nombre, apellido, usuario, sucursal, salario };
+    //   Verificar campos vacíos (incluyendo 'correo')
+    const fieldsToCheck = { nombre, apellido, usuario, sucursal, salario, correo };
     const invalidFields = [];
     for (const [key, value] of Object.entries(fieldsToCheck)) {
       if (value !== undefined && value !== null && value.toString().trim() === '') {
@@ -134,32 +140,40 @@ administradoresController.updateAdministradores = async (req, res) => {
       }
     }
     if (invalidFields.length > 0) {
-      console.log("❌ Campos inválidos (vacíos) en actualización:", invalidFields.join(", "));
+      console.log("   Campos inválidos (vacíos) en actualización:", invalidFields.join(", "));
       return res.status(400).json({
         message: `Los siguientes campos no pueden estar vacíos: ${invalidFields.join(", ")}`,
         invalidFields,
       });
     }
 
-    // Verificar unicidad de usuario si cambia
+    //   Verificar unicidad de usuario y correo si cambian
     if (usuario && usuario !== adminActual.usuario) {
-      const existe = await administradoresModel.findOne({ usuario });
-      if (existe) {
+      const existeUsuario = await administradoresModel.findOne({ usuario });
+      if (existeUsuario) {
         return res.status(400).json({ message: "El nombre de usuario ya está en uso" });
       }
     }
+    if (correo && correo !== adminActual.correo) {
+      const existeCorreo = await administradoresModel.findOne({ correo });
+      if (existeCorreo) {
+        return res.status(400).json({ message: "El correo electrónico ya está en uso" });
+      }
+    }
 
+    //   Construir objeto de actualización (incluye 'correo')
     let updateData = {
       nombre: nombre || adminActual.nombre,
       apellido: apellido || adminActual.apellido,
       usuario: usuario || adminActual.usuario,
       sucursal: sucursal || adminActual.sucursal,
       salario: salario ? Number(salario) : adminActual.salario,
+      correo: correo || adminActual.correo,   // <-- ahora se incluye
     };
 
-    // Actualizar contraseña si se envía (usando 'password')
+    // Actualizar contraseña si se envía
     if (password && password.trim() !== "") {
-      updateData.contraseña = await bcrypt.hash(password, 10); // se guarda en 'contraseña' del modelo
+      updateData.contraseña = await bcrypt.hash(password, 10);
     }
 
     // Actualizar foto de perfil

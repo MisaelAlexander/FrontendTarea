@@ -37,8 +37,6 @@ const EmployeeDetailModal = ({ user, onClose, onEdit, onDelete }) => {
           <div>
             <h3 className="font-bold mb-2">Datos Personales</h3>
             <div className="space-y-3">
-              <div className="border rounded-xl p-3"><span className="font-bold">DUI:</span> {user.dui || 'No registrado'}</div>
-              <div className="border rounded-xl p-3"><span className="font-bold">Fecha Nac.:</span> {user.fechaNacimiento || 'No registrada'}</div>
               <div className="border rounded-xl p-3"><span className="font-bold">Salario:</span> ${user.salario}</div>
               <div className="border rounded-xl p-3"><span className="font-bold">Sucursal:</span> {user.sucursal}</div>
             </div>

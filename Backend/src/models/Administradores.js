@@ -4,6 +4,13 @@ const AdministradoresSchema = new Schema(
   {
     nombre: { type: String, required: true, trim: true },
     apellido: { type: String, required: true, trim: true },
+    correo: { 
+      type: String, 
+      required: true, 
+      unique: true, 
+      trim: true, 
+
+    },
     usuario: { type: String, required: true, unique: true, trim: true },
     contraseña: { type: String, required: true },
     sucursal: { type: String, required: true },
