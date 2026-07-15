@@ -71,7 +71,7 @@ carritoController.insertCarrito = async (req, res) => {
 
             nuevosProductos.push({
                 IDProducto: Productos[i].IDProducto,
-                monto: Productos[i].amount,
+                amount: Productos[i].amount,
                 subtotal: subtotal
             });
         }

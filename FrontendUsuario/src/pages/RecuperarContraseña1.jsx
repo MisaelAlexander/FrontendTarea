@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import PinInput from "../components/pinInput.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
-import { motion } from "framer-motion";
+import { useToast } from "../components/Toast";
 import api from "../services/api";
 
 export default function App() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [pinCompleto, setPinCompleto] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handlePinComplete = (codigo) => {
@@ -18,19 +18,19 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (pinCompleto.length !== 6) {
-      setError("Por favor, ingresa los 6 digitos del codigo.");
+      toast.warning("Por favor, ingresa los 6 digitos del codigo.");
       return;
     }
 
     setLoading(true);
     try {
       await api.verifyRecoveryCode(pinCompleto);
+      toast.success("Código verificado correctamente");
       navigate("/nueva-contraseña");
     } catch (err) {
-      setError(err.message || "Error al verificar codigo");
+      toast.error(err.message || "Código incorrecto");
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-[#bad4f8] relative">
       <CircleAnimation numCircles={20} />
-      <motion.div className="flex-grow flex items-center justify-center p-4 relative z-10">
+      <div className="flex-grow flex items-center justify-center p-4 relative z-10">
         <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/30 w-full max-w-lg">
           <div className="text-center mb-8">
             <h1 className="text-[36px] font-bold text-[#1a365d] tracking-tight">
@@ -52,11 +52,6 @@ export default function App() {
               <p className="text-center text-gray-600 font-medium mb-2">Digite el codigo:</p>
               <PinInput length={6} onComplete={handlePinComplete} />
             </div>
-            {error && (
-              <div className="text-center mb-4 text-sm font-medium text-red-500">
-                {error}
-              </div>
-            )}
             <div className="text-center mb-8">
               <p className="text-gray-500 mt-1">
                 <a
@@ -74,7 +69,7 @@ export default function App() {
             </div>
           </form>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

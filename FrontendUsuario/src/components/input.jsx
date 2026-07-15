@@ -6,9 +6,7 @@ export default function Input({
   placeholder,
   icon: Icon,
   onIconClick,
-  value,
-  onChange,
-  name,
+  error,
   className = "",
   ...rest
 }) {
@@ -22,11 +20,10 @@ export default function Input({
       <div className="relative">
         <input
           type={type}
-          name={name}
           placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className={`w-full px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#165892] focus:border-transparent ${className}`}
+          className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#165892] focus:border-transparent ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } ${className}`}
           {...rest}
         />
         {Icon && (
@@ -40,6 +37,9 @@ export default function Input({
           </button>
         )}
       </div>
+      {error && (
+        <p className="text-red-500 text-xs mt-1">{error}</p>
+      )}
     </div>
   );
 }

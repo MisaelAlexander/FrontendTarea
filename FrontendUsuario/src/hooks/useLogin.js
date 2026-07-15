@@ -1,54 +1,42 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useForm } from 'react-hook-form';
 
 /**
  * Hook para la página Login.
- * Maneja: formulario, visibilidad de contraseña, envío con auth, errores.
+ * Maneja: formulario con react-hook-form, visibilidad de contraseña, envío con auth, errores.
  */
 export function useLogin() {
-  // Navegador para redirección después del login
   const navigate = useNavigate();
-  // Función de login del contexto de autenticación
   const { login } = useAuth();
 
-  // Estado: datos del formulario (usuario y contraseña)
-  const [formData, setFormData] = useState({ usuario: '', password: '' });
-  // Estado: visibilidad del campo contraseña
   const [showPassword, setShowPassword] = useState(false);
-  // Estado: mensaje de error
   const [error, setError] = useState('');
-  // Estado: indicador de carga durante el envío
   const [loading, setLoading] = useState(false);
 
-  /**
-   * Actualiza los campos del formulario.
-   * Limpia el error al escribir.
-   * @param {Event} e - Evento del input
-   */
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError(''); // Limpia error al modificar
-  };
+  const {
+    register,
+    handleSubmit: hookSubmit,
+    formState: { errors },
+  } = useForm({
+    mode: 'onChange',
+    defaultValues: {
+      usuario: '',
+      password: '',
+    },
+  });
 
-  /**
-   * Alterna la visibilidad del campo contraseña.
-   */
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  /**
-   * Envía el formulario de login.
-   * Llama a la API de autenticación y redirige al dashboard.
-   */
-  const handleSubmit = async (e) => {
-    e.preventDefault(); // Previene recarga de página
+  const onSubmit = async (data) => {
     setError('');
     setLoading(true);
     try {
-      await login(formData.usuario, formData.password); // Llama al auth context
-      navigate('/dashboard'); // Redirige al dashboard
+      await login(data.usuario, data.password);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesion');
     } finally {
@@ -57,12 +45,12 @@ export function useLogin() {
   };
 
   return {
-    formData,                // Datos del formulario
-    showPassword,            // Visibilidad de contraseña
-    error,                   // Mensaje de error
-    loading,                 // Estado de carga
-    handleChange,            // Handler para inputs
-    togglePasswordVisibility,// Toggle de visibilidad
-    handleSubmit,            // Handler del formulario
+    showPassword,
+    error,
+    loading,
+    errors,
+    register,
+    handleSubmit: hookSubmit(onSubmit),
+    togglePasswordVisibility,
   };
 }

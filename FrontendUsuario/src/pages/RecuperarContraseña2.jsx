@@ -4,41 +4,35 @@ import { useNavigate } from "react-router-dom";
 import Input from "../components/input.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
-import { motion } from "framer-motion";
+import { useToast } from "../components/Toast";
 import api from "../services/api";
+import { useForm } from "react-hook-form";
 
 export default function App() {
   const navigate = useNavigate();
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const toast = useToast();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm({ mode: 'onChange' });
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (newPassword !== confirmPassword) {
-      setError("Las contrasenas no coinciden");
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError("La contrasena debe tener al menos 6 caracteres");
-      return;
-    }
-
+  const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await api.resetPassword(newPassword, confirmPassword);
+      await api.resetPassword(data.newPassword, data.confirmPassword);
+      toast.success("Contraseña cambiada correctamente");
       navigate("/");
     } catch (err) {
-      setError(err.message || "Error al cambiar contrasena");
+      toast.error(err.message || "Error al cambiar contrasena");
     } finally {
       setLoading(false);
     }
@@ -47,7 +41,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-[#bad4f8] relative">
       <CircleAnimation numCircles={20} />
-      <motion.div className="flex-grow flex items-center justify-center p-4 relative z-10">
+      <div className="flex-grow flex items-center justify-center p-4 relative z-10">
         <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/30 w-full max-w-lg">
           <div className="text-center mb-8">
             <h1 className="text-[36px] font-bold text-[#1a365d] tracking-tight">
@@ -55,32 +49,33 @@ export default function App() {
             </h1>
             <p className="text-gray-500 mt-1">Establece una nueva contrasena segura</p>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <Input
               label="Nueva Contrasena"
-              name="newPassword"
               placeholder="Ingrese su nueva contrasena"
               type={showPassword ? "text" : "password"}
               icon={showPassword ? EyeOff : Eye}
               onIconClick={togglePasswordVisibility}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
+              error={errors.newPassword?.message}
+              {...register('newPassword', {
+                required: 'La contraseña es obligatoria',
+                minLength: { value: 6, message: 'Mínimo 6 caracteres' },
+              })}
             />
 
             <Input
               label="Confirmar Contrasena"
-              name="confirmPassword"
               placeholder="Confirme su nueva contrasena"
               type={showPassword ? "text" : "password"}
               icon={showPassword ? EyeOff : Eye}
               onIconClick={togglePasswordVisibility}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
+              error={errors.confirmPassword?.message}
+              {...register('confirmPassword', {
+                required: 'Confirma la contraseña',
+                validate: (value) =>
+                  value === watch('newPassword') || 'Las contraseñas no coinciden',
+              })}
             />
-
-            {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
 
             <div className="text-center mb-8">
               <p className="text-gray-500 mt-1">
@@ -99,7 +94,7 @@ export default function App() {
             </div>
           </form>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

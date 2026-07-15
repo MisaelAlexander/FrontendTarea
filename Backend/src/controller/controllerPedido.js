@@ -7,16 +7,58 @@ const pedidosController = {};
 
 import pedidosModel from "../models/Pedidos.js";
 import carritosModel from "../models/Carrito.js";
+import clientesModel from "../models/Clientes.js";
+import productosModel from "../models/Productos.js";
 
 /**
  * GET - Obtener todos los pedidos.
- * Populate: carrito completo con productos detallados.
+ * Trae manualmente la información del carrito, cliente y productos.
  */
 pedidosController.getAllPedidos = async (req, res) => {
     try {
-        const pedidos = await pedidosModel.find()
-            .populate("idCarrito"); // Trae todos los datos del carrito referenciado
-        return res.status(200).json(pedidos);
+        const pedidos = await pedidosModel.find().sort({ createdAt: -1 });
+
+        const pedidosConDatos = await Promise.all(
+            pedidos.map(async (pedido) => {
+                const pedidoObj = pedido.toObject();
+
+                const carrito = await carritosModel.findById(pedido.idCarrito);
+                if (!carrito) {
+                    return { ...pedidoObj, idCarrito: null };
+                }
+
+                const cliente = carrito.IDCliente
+                    ? await clientesModel.findById(carrito.IDCliente).select('nombre apellido correo')
+                    : null;
+
+                const productosConDetalles = await Promise.all(
+                    (carrito.Productos || []).map(async (item) => {
+                        const producto = item.IDProducto
+                            ? await productosModel.findById(item.IDProducto).select('nombre precio imagenesProductos')
+                            : null;
+                        return {
+                            IDProducto: producto,
+                            amount: item.amount || item.monto,
+                            subtotal: item.subtotal
+                        };
+                    })
+                );
+
+                return {
+                    ...pedidoObj,
+                    idCarrito: {
+                        _id: carrito._id,
+                        IDCliente: cliente || { nombre: 'Desconocido', apellido: '', correo: '' },
+                        Productos: productosConDetalles,
+                        total: carrito.total || 0,
+                        Descuento: carrito.Descuento || 0,
+                        totalConDescuento: carrito.totalConDescuento || carrito.total || 0
+                    }
+                };
+            })
+        );
+
+        return res.status(200).json(pedidosConDatos);
     } catch (error) {
         console.log("Error: " + error);
         return res.status(500).json({ message: "Internal server error", error });
@@ -25,7 +67,6 @@ pedidosController.getAllPedidos = async (req, res) => {
 
 /**
  * GET - Obtener pedidos de un cliente específico.
- * Primero busca los carritos del cliente, luego los pedidos que los referencian.
  * @param {string} req.params.clienteId - ID del cliente
  */
 pedidosController.getPedidosByCliente = async (req, res) => {
@@ -36,15 +77,52 @@ pedidosController.getPedidosByCliente = async (req, res) => {
         const carritos = await carritosModel.find({ IDCliente: clienteId }).select("_id");
         const carritoIds = carritos.map(c => c._id);
 
-        // 2. Encontrar pedidos que referencien esos carritos
+        // 2. Obtener pedidos de esos carritos
         const pedidos = await pedidosModel.find({ idCarrito: { $in: carritoIds } })
-            .populate({
-                path: "idCarrito",
-                populate: { path: "Productos.IDProducto", select: "nombre precio imagenesProductos" }
-            })
-            .sort({ createdAt: -1 }); // Ordenar del más reciente al más antiguo
+            .sort({ createdAt: -1 });
 
-        return res.status(200).json(pedidos);
+        // 3. Enriquecer cada pedido con datos del carrito
+        const pedidosConDatos = await Promise.all(
+            pedidos.map(async (pedido) => {
+                const pedidoObj = pedido.toObject();
+                const carrito = await carritosModel.findById(pedido.idCarrito);
+
+                if (!carrito) {
+                    return { ...pedidoObj, idCarrito: null };
+                }
+
+                const cliente = carrito.IDCliente
+                    ? await clientesModel.findById(carrito.IDCliente).select('nombre apellido correo')
+                    : null;
+
+                const productosConDetalles = await Promise.all(
+                    (carrito.Productos || []).map(async (item) => {
+                        const producto = item.IDProducto
+                            ? await productosModel.findById(item.IDProducto).select('nombre precio imagenesProductos')
+                            : null;
+                        return {
+                            IDProducto: producto,
+                            amount: item.amount || item.monto,
+                            subtotal: item.subtotal
+                        };
+                    })
+                );
+
+                return {
+                    ...pedidoObj,
+                    idCarrito: {
+                        _id: carrito._id,
+                        IDCliente: cliente || { nombre: 'Desconocido', apellido: '', correo: '' },
+                        Productos: productosConDetalles,
+                        total: carrito.total || 0,
+                        Descuento: carrito.Descuento || 0,
+                        totalConDescuento: carrito.totalConDescuento || carrito.total || 0
+                    }
+                };
+            })
+        );
+
+        return res.status(200).json(pedidosConDatos);
     } catch (error) {
         console.log("Error: " + error);
         return res.status(500).json({ message: "Internal server error", error });
@@ -57,12 +135,46 @@ pedidosController.getPedidosByCliente = async (req, res) => {
  */
 pedidosController.getPedidosById = async (req, res) => {
     try {
-        const pedido = await pedidosModel.findById(req.params.id)
-            .populate("idCarrito");
+        const pedido = await pedidosModel.findById(req.params.id);
         if (!pedido) {
             return res.status(404).json({ message: "Pedido no encontrado" });
         }
-        return res.status(200).json(pedido);
+
+        const pedidoObj = pedido.toObject();
+        const carrito = await carritosModel.findById(pedido.idCarrito);
+
+        if (!carrito) {
+            return res.status(200).json({ ...pedidoObj, idCarrito: null });
+        }
+
+        const cliente = carrito.IDCliente
+            ? await clientesModel.findById(carrito.IDCliente).select('nombre apellido correo')
+            : null;
+
+        const productosConDetalles = await Promise.all(
+            (carrito.Productos || []).map(async (item) => {
+                const producto = item.IDProducto
+                    ? await productosModel.findById(item.IDProducto).select('nombre precio imagenesProductos')
+                    : null;
+                return {
+                    IDProducto: producto,
+                    amount: item.amount,
+                    subtotal: item.subtotal
+                };
+            })
+        );
+
+        return res.status(200).json({
+            ...pedidoObj,
+            idCarrito: {
+                _id: carrito._id,
+                IDCliente: cliente || { nombre: 'Desconocido', apellido: '', correo: '' },
+                Productos: productosConDetalles,
+                total: carrito.total || 0,
+                Descuento: carrito.Descuento || 0,
+                totalConDescuento: carrito.totalConDescuento || carrito.total || 0
+            }
+        });
     } catch (error) {
         console.log("Error: " + error);
         return res.status(500).json({ message: "Internal server error", error });
@@ -153,11 +265,53 @@ pedidosController.searchByTipoPago = async (req, res) => {
     try {
         const { tipoPago } = req.body;
         const pedidos = await pedidosModel.find({ tipoPago: { $regex: tipoPago, $options: "i" } })
-            .populate("idCarrito");
-        if (pedidos.length === 0) {
+            .sort({ createdAt: -1 });
+
+        // Enriquecer con datos del carrito
+        const pedidosConDatos = await Promise.all(
+            pedidos.map(async (pedido) => {
+                const pedidoObj = pedido.toObject();
+                const carrito = await carritosModel.findById(pedido.idCarrito);
+
+                if (!carrito) {
+                    return { ...pedidoObj, idCarrito: null };
+                }
+
+                const cliente = carrito.IDCliente
+                    ? await clientesModel.findById(carrito.IDCliente).select('nombre apellido correo')
+                    : null;
+
+                const productosConDetalles = await Promise.all(
+                    (carrito.Productos || []).map(async (item) => {
+                        const producto = item.IDProducto
+                            ? await productosModel.findById(item.IDProducto).select('nombre precio imagenesProductos')
+                            : null;
+                        return {
+                            IDProducto: producto,
+                            amount: item.amount || item.monto,
+                            subtotal: item.subtotal
+                        };
+                    })
+                );
+
+                return {
+                    ...pedidoObj,
+                    idCarrito: {
+                        _id: carrito._id,
+                        IDCliente: cliente || { nombre: 'Desconocido', apellido: '', correo: '' },
+                        Productos: productosConDetalles,
+                        total: carrito.total || 0,
+                        Descuento: carrito.Descuento || 0,
+                        totalConDescuento: carrito.totalConDescuento || carrito.total || 0
+                    }
+                };
+            })
+        );
+
+        if (pedidosConDatos.length === 0) {
             return res.status(404).json({ message: "No se encontraron pedidos con ese tipo de pago" });
         }
-        return res.status(200).json(pedidos);
+        return res.status(200).json(pedidosConDatos);
     } catch (error) {
         console.log("Error: " + error);
         return res.status(500).json({ message: "Internal server error", error });

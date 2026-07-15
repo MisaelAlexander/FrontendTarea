@@ -123,13 +123,10 @@ export const CartProvider = ({ children }) => {
     if (!cartId) throw new Error('No hay carrito para procesar');
     const currentCartId = cartId;
 
-    // 1. Crear pedido
+    // 1. Crear pedido (el carrito se mantiene como historial)
     await api.createOrder(currentCartId, tipoPago);
 
-    // 2. Eliminar carrito en backend
-    await api.deleteCart(currentCartId);
-
-    // 3. Limpiar carrito en frontend
+    // 2. Limpiar carrito en frontend
     clearCart();
   };
 

@@ -3,27 +3,26 @@ import { User, Eye, EyeOff, Mail, UserCircle } from "lucide-react";
 import Input from "../components/input.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
-import { motion } from "framer-motion";
+
 import { useRegistro } from "../hooks/useRegistro";
 
 /**
  * Página de Registro.
- * Formulario multi-paso: datos personales → verificación de código por correo.
+ * Formulario multi-paso con react-hook-form: datos personales → verificación de código por correo.
  */
 export default function App() {
-  // Obtiene toda la lógica del hook personalizado
   const {
-    step,                    // Paso actual (1=datos, 2=código)
-    formData,                // Datos del formulario
-    verificationCode,        // Código de verificación
-    setVerificationCode,     // Setter del código
-    error,                   // Mensaje de error
-    loading,                 // Estado de carga
-    showPassword,            // Visibilidad de contraseña
-    handleChange,            // Handler para inputs
-    togglePasswordVisibility,// Toggle de visibilidad
-    handleSubmitStep1,       // Envío del paso 1 (registro)
-    handleSubmitStep2,       // Envío del paso 2 (verificación)
+    step,
+    verificationCode,
+    setVerificationCode,
+    error,
+    loading,
+    showPassword,
+    errors,
+    register,
+    handleSubmitStep1,
+    handleSubmitStep2,
+    togglePasswordVisibility,
   } = useRegistro();
 
   // === PASO 2: Verificación de código ===
@@ -42,7 +41,6 @@ export default function App() {
             <form onSubmit={handleSubmitStep2}>
               <Input
                 label="Codigo de Verificacion"
-                name="code"
                 placeholder="Ingrese el codigo de 6 digitos"
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value)}
@@ -73,68 +71,73 @@ export default function App() {
             <p className="text-gray-500 mt-1">Se parte de nuestra familia</p>
           </div>
           <form onSubmit={handleSubmitStep1}>
-            {/* Campo: Nombre */}
             <Input
               label="Nombre"
-              name="nombre"
               placeholder="Nombre"
               icon={UserCircle}
-              value={formData.nombre}
-              onChange={handleChange}
-              required
+              error={errors.nombre?.message}
+              {...register('nombre', {
+                required: 'El nombre es obligatorio',
+                minLength: { value: 2, message: 'Mínimo 2 caracteres' },
+                maxLength: { value: 50, message: 'Máximo 50 caracteres' },
+              })}
             />
 
-            {/* Campo: Apellido */}
             <Input
               label="Apellido"
-              name="apellido"
               placeholder="Apellido"
               icon={UserCircle}
-              value={formData.apellido}
-              onChange={handleChange}
-              required
+              error={errors.apellido?.message}
+              {...register('apellido', {
+                required: 'El apellido es obligatorio',
+                minLength: { value: 2, message: 'Mínimo 2 caracteres' },
+                maxLength: { value: 50, message: 'Máximo 50 caracteres' },
+              })}
             />
 
-            {/* Campo: Usuario */}
             <Input
               label="Usuario"
-              name="usuario"
               placeholder="Ingrese su usuario"
               icon={User}
-              value={formData.usuario}
-              onChange={handleChange}
-              required
+              error={errors.usuario?.message}
+              {...register('usuario', {
+                required: 'El usuario es obligatorio',
+                minLength: { value: 3, message: 'Mínimo 3 caracteres' },
+                maxLength: { value: 30, message: 'Máximo 30 caracteres' },
+                pattern: { value: /^[a-zA-Z0-9_]+$/, message: 'Solo letras, números y guión bajo' },
+              })}
             />
 
-            {/* Campo: Contraseña con toggle */}
             <Input
               label="Contrasena"
-              name="password"
               placeholder="Ingrese su contrasena"
               type={showPassword ? "text" : "password"}
               icon={showPassword ? EyeOff : Eye}
               onIconClick={togglePasswordVisibility}
-              value={formData.password}
-              onChange={handleChange}
-              required
+              error={errors.password?.message}
+              {...register('password', {
+                required: 'La contraseña es obligatoria',
+                minLength: { value: 6, message: 'Mínimo 6 caracteres' },
+              })}
             />
 
-            {/* Campo: Correo */}
             <Input
               label="Correo"
-              name="correo"
               placeholder="Ingrese su correo"
               type="email"
               icon={Mail}
-              value={formData.correo}
-              onChange={handleChange}
-              required
+              error={errors.correo?.message}
+              {...register('correo', {
+                required: 'El correo es obligatorio',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Correo electrónico inválido',
+                },
+              })}
             />
 
-            {/* Mensaje de error */}
             {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
 
-            {/* Link para volver al login */}
             <div className="text-center mb-8">
               <p className="text-gray-500 mt-1">
                 <a
@@ -146,7 +149,6 @@ export default function App() {
               </p>
             </div>
 
-            {/* Botón de registro */}
             <div className="flex justify-center mt-4">
               <Button type="submit" disabled={loading}>
                 {loading ? "Enviando..." : "Registrar"}

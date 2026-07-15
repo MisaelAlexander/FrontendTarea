@@ -4,18 +4,25 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from './Toast';
 import api from '../services/api';
+import { useForm } from 'react-hook-form';
 
 const ProductDetailsModal = ({ product, isOpen, onClose }) => {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState(0);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
   const { addToCart } = useCart();
   const { user } = useAuth();
   const toast = useToast();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({ mode: 'onChange' });
 
   const productId = product?._id || product?.id;
 
@@ -51,18 +58,18 @@ const ProductDetailsModal = ({ product, isOpen, onClose }) => {
     onClose();
   };
 
-  const handleSubmitComment = async () => {
-    if (!newComment.trim() || !user?.id) return;
+  const onSubmitComment = async (data) => {
+    if (!user?.id) return;
     setSubmitting(true);
     try {
       await api.createComment(
         'Comentario',
-        newComment,
+        data.comentario,
         newRating,
         user.id,
         productId
       );
-      setNewComment('');
+      reset();
       setNewRating(5);
       const updatedComments = await api.getCommentsByProduct(productId);
       setComments(updatedComments);
@@ -151,10 +158,10 @@ const ProductDetailsModal = ({ product, isOpen, onClose }) => {
             )}
 
             {user ? (
-              <div className="flex flex-col gap-3 mt-8">
+              <form onSubmit={handleSubmit(onSubmitComment)} className="flex flex-col gap-3 mt-8">
                 <div className="flex gap-1 shrink-0">
                   {[...Array(5)].map((_, i) => (
-                    <button key={i} onClick={() => setNewRating(i + 1)}>
+                    <button key={i} type="button" onClick={() => setNewRating(i + 1)}>
                       <Star className={`w-5 h-5 ${i < newRating ? 'fill-yellow-400 stroke-yellow-400' : 'fill-transparent stroke-gray-800'} cursor-pointer`} strokeWidth={1.5} />
                     </button>
                   ))}
@@ -163,19 +170,24 @@ const ProductDetailsModal = ({ product, isOpen, onClose }) => {
                   <input
                     type="text"
                     placeholder="Escribe un comentario..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 px-4 py-3 text-sm focus:outline-none"
+                    className={`flex-1 px-4 py-3 text-sm focus:outline-none ${errors.comentario ? 'border-red-500' : ''}`}
+                    {...register('comentario', {
+                      required: 'El comentario no puede estar vacío',
+                      minLength: { value: 3, message: 'Mínimo 3 caracteres' },
+                    })}
                   />
                   <button
-                    onClick={handleSubmitComment}
-                    disabled={submitting || !newComment.trim()}
+                    type="submit"
+                    disabled={submitting}
                     className="bg-[#1b4b8a] hover:bg-[#153a6b] disabled:bg-gray-400 text-white font-bold px-8 py-3 text-[13px]"
                   >
                     {submitting ? 'Enviando...' : 'Enviar'}
                   </button>
                 </div>
-              </div>
+                {errors.comentario && (
+                  <p className="text-red-500 text-xs">{errors.comentario.message}</p>
+                )}
+              </form>
             ) : (
               <p className="text-sm text-gray-500 mt-4">Inicia sesion para dejar un comentario.</p>
             )}
