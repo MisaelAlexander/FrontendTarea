@@ -1,24 +1,36 @@
 import mongoose from "mongoose";
 import {config} from "./config.js"
 
-mongoose.connect(config.db.URI);
+const connectDB = async () => {
+  try {
+    await mongoose.connect(config.db.URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+  } catch (error) {
+    console.log("Error connecting to DB: " + error);
+  }
+};
 
-// ------- comprobar que todo funciona
+connectDB();
 
-// Creo una constante que es igual a la conexión
 const connection = mongoose.connection;
 
-connection.once("open", ()=> {
-    console.log("DB is connected")
-})
+connection.once("open", () => {
+    console.log("DB is connected");
+});
 
-connection.on("disconnected", ()=> {
-    console.log("DB is disconnected")
-})
+connection.on("disconnected", () => {
+    console.log("DB is disconnected");
+});
 
-connection.on("error", (error)=>{
-    console.log("error found" + error)
-})
+connection.on("error", (error) => {
+    console.log("error found: " + error);
+});
+
+connection.on("reconnected", () => {
+    console.log("DB reconnected");
+});
 
 
 

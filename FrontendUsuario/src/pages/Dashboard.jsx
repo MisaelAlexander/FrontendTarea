@@ -1,75 +1,66 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // ← falta importar
+import React from 'react';
 import { useCart } from '../context/CartContext';
-import { useSearch } from '../context/SearchContext';
 import CartSidebar from '../components/cardSidebar';
 import CheckoutModal from '../components/checkoutModal';
 import ProductCard from '../components/card';
 import ProductDetailsModal from '../components/productdetailsModal';
-import Carousel from '../components/carrusel';
-import CategoryButton from '../components/categoryButton';
-import productsData from '../data/dataProduct';
-import { Smartphone, Laptop, Monitor, Headphones, Cpu, Usb } from 'lucide-react';
+import { useDashboard } from '../hooks/useDashboard';
 
+/**
+ * Página de Dashboard (Productos).
+ * Muestra todos los productos con filtrado por búsqueda en tiempo real.
+ */
 const Dashboard = () => {
-  const navigate = useNavigate(); // ← agregar
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [favoriteIds, setFavoriteIds] = useState([1, 4]);
-  const { addToCart, cartItems } = useCart();
-  const { searchQuery } = useSearch();
+  // Función para agregar al carrito del contexto
+  const { addToCart } = useCart();
 
-  const toggleFavorite = (id) => {
-    setFavoriteIds(prev =>
-      prev.includes(id) ? prev.filter(favId => favId !== id) : [...prev, id]
-    );
-  };
-
-  const filteredProducts = productsData.filter(product => {
-    const query = searchQuery.toLowerCase();
-    return (
-      product.title.toLowerCase().includes(query) ||
-      (product.category && product.category.toLowerCase().includes(query))
-    );
-  });
-
-  const handleCategoryClick = (categoryName) => {
-    navigate(`/categoria/${categoryName}`);
-  };
+  // Obtiene toda la lógica del hook personalizado
+  const {
+    filteredProducts,        // Productos filtrados por búsqueda
+    favoriteIds,             // IDs de favoritos del usuario
+    loading,                 // Estado de carga
+    searchQuery,             // Texto de búsqueda actual
+    selectedProduct,         // Producto seleccionado para modal
+    setSelectedProduct,      // Función para seleccionar producto
+    isCheckoutOpen,          // Estado del modal de checkout
+    setIsCheckoutOpen,       // Función para abrir/cerrar checkout
+    toggleFavorite,          // Función para alternar favorito
+  } = useDashboard();
 
   return (
     <>
+      {/* Sidebar del carrito */}
       <CartSidebar onOpenCheckout={() => setIsCheckoutOpen(true)} />
-      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} cartItems={cartItems} />
-      <ProductDetailsModal product={selectedProduct} isOpen={!!selectedProduct} onClose={() => setSelectedProduct(null)} />
 
-      <Carousel />
+      {/* Modal de checkout */}
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} />
 
+      {/* Modal de detalles del producto */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
+
+      {/* Sección principal de productos */}
       <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 px-[2%]">Categorías</h2>
-        <div className="flex flex-wrap gap-2 sm:gap-4 md:gap-6 lg:justify-between justify-center px-[5%]">
-          <CategoryButton icon={Smartphone} label="Teléfonos" onClick={() => handleCategoryClick("Telefonos")} />
-          <CategoryButton icon={Laptop} label="Laptops" onClick={() => handleCategoryClick("Laptops")} />
-          <CategoryButton icon={Monitor} label="Computadoras" onClick={() => handleCategoryClick("Computadoras")} />
-          <CategoryButton icon={Headphones} label="Auriculares" onClick={() => handleCategoryClick("Auriculares")} />
-          <CategoryButton icon={Cpu} label="Componentes" onClick={() => handleCategoryClick("Componentes")} />
-          <CategoryButton icon={Usb} label="Accesorios" onClick={() => handleCategoryClick("Accesorios")} />
-        </div>
-      </section>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 px-[5%]">Todos los Productos</h2>
 
-      <section className="mb-12">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 px-[2%]">Productos Destacados</h2>
-        {filteredProducts.length === 0 ? (
+        {/* Estados de carga, vacío y resultados */}
+        {loading ? (
+          <div className="text-center py-10 text-gray-500 px-[5%]">Cargando productos...</div>
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-10 text-gray-500 px-[5%]">
             No se encontraron productos para "{searchQuery}"
           </div>
         ) : (
+          /* Grid de productos - responsive */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-[5%]">
             {filteredProducts.map(product => (
               <ProductCard
-                key={product.id}
+                key={product._id}
                 product={product}
-                isLiked={favoriteIds.includes(product.id)}
+                isLiked={favoriteIds.includes(product._id)}
                 onToggleLike={toggleFavorite}
                 onAddToCart={addToCart}
                 onViewDetails={setSelectedProduct}

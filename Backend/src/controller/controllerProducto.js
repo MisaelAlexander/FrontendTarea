@@ -1,9 +1,16 @@
 import productosModel from "../models/Productos.js";
 import { v2 as cloudinary } from "cloudinary";
 
+/**
+ * Controller de Productos.
+ * Maneja todas las operaciones CRUD para productos.
+ */
 const productosController = {};
 
-// Helper para eliminar imágenes de Cloudinary
+/**
+ * Función auxiliar para eliminar imágenes de Cloudinary.
+ * @param {string} publicId - ID público de la imagen en Cloudinary
+ */
 const eliminarImagenCloudinary = async (publicId) => {
   if (publicId) {
     try {
@@ -14,7 +21,10 @@ const eliminarImagenCloudinary = async (publicId) => {
   }
 };
 
-// GET - Obtener todos los productos
+/**
+ * GET - Obtener todos los productos.
+ * Retorna la lista completa de productos.
+ */
 productosController.getAllProductos = async (req, res) => {
   try {
     const productos = await productosModel.find();
@@ -25,7 +35,10 @@ productosController.getAllProductos = async (req, res) => {
   }
 };
 
-// GET - Obtener producto por ID
+/**
+ * GET - Obtener producto por ID.
+ * @param {string} req.params.id - ID del producto
+ */
 productosController.getProductosById = async (req, res) => {
   try {
     const producto = await productosModel.findById(req.params.id);
@@ -39,13 +52,24 @@ productosController.getProductosById = async (req, res) => {
   }
 };
 
-// POST - Crear producto con imágenes subidas a Cloudinary
+/**
+ * POST - Crear un nuevo producto.
+ * Recibe datos del producto y opcionalmente imágenes subidas a Cloudinary.
+ * @body {string} nombre - Nombre del producto
+ * @body {string} descripcion - Descripción del producto
+ * @body {number} stock - Cantidad en inventario
+ * @body {number} precio - Precio unitario
+ * @body {string} categoria - Categoría del producto
+ * @body {string} sucursal - Sucursal donde se encuentra
+ * @body {number} [descuento] - Porcentaje de descuento (opcional)
+ * @body {string} [colores] - Colores separados por comas (opcional)
+ */
 productosController.insertProductos = async (req, res) => {
   try {
-    const { nombre, descripcion, stock, precio, sucursal, descuento, colores } = req.body;
+    const { nombre, descripcion, stock, precio, categoria, sucursal, descuento, colores } = req.body;
 
     // Validaciones básicas
-    if (!nombre || !descripcion || !stock || !precio || !sucursal) {
+    if (!nombre || !descripcion || !stock || !precio || !categoria || !sucursal) {
       return res.status(400).json({ message: "Faltan campos obligatorios" });
     }
 
@@ -73,6 +97,7 @@ productosController.insertProductos = async (req, res) => {
       descripcion,
       stock: Number(stock),
       precio: Number(precio),
+      categoria,
       sucursal,
       descuento: descuento ? Number(descuento) : 0,
       imagenesProductos,
@@ -87,21 +112,26 @@ productosController.insertProductos = async (req, res) => {
   }
 };
 
-// PUT - Actualizar producto (con eliminación de imágenes viejas)
+/**
+ * PUT - Actualizar un producto existente.
+ * Elimina imágenes viejas de Cloudinary si se suben nuevas.
+ * @param {string} req.params.id - ID del producto a actualizar
+ */
 productosController.updateProductos = async (req, res) => {
   try {
-    const { nombre, descripcion, stock, precio, sucursal, descuento, colores } = req.body;
+    const { nombre, descripcion, stock, precio, categoria, sucursal, descuento, colores } = req.body;
     const productoActual = await productosModel.findById(req.params.id);
     if (!productoActual) {
       return res.status(404).json({ message: "Producto no encontrado" });
     }
 
-    // Preparar datos a actualizar
+    // Preparar datos a actualizar (mantiene valores actuales si no se envían nuevos)
     let updateData = {
       nombre: nombre || productoActual.nombre,
       descripcion: descripcion || productoActual.descripcion,
       stock: stock !== undefined ? Number(stock) : productoActual.stock,
       precio: precio !== undefined ? Number(precio) : productoActual.precio,
+      categoria: categoria || productoActual.categoria,
       sucursal: sucursal || productoActual.sucursal,
       descuento: descuento !== undefined ? Number(descuento) : productoActual.descuento,
     };
@@ -151,7 +181,11 @@ productosController.updateProductos = async (req, res) => {
   }
 };
 
-// DELETE - Eliminar producto (y sus imágenes de Cloudinary)
+/**
+ * DELETE - Eliminar un producto.
+ * Elimina también todas sus imágenes de Cloudinary.
+ * @param {string} req.params.id - ID del producto a eliminar
+ */
 productosController.deleteProductos = async (req, res) => {
   try {
     const producto = await productosModel.findById(req.params.id);
@@ -172,7 +206,11 @@ productosController.deleteProductos = async (req, res) => {
   }
 };
 
-// GET - Búsqueda por nombre (query param)
+/**
+ * GET - Búsqueda por nombre (query param).
+ * Busca productos cuyo nombre contenga el término de búsqueda.
+ * @query {string} nombre - Término de búsqueda (insensible a mayúsculas)
+ */
 productosController.searchByNombre = async (req, res) => {
   try {
     const { nombre } = req.query;
@@ -180,7 +218,7 @@ productosController.searchByNombre = async (req, res) => {
       return res.status(400).json({ message: "Debe proporcionar un nombre para buscar" });
     }
     const productos = await productosModel.find({
-      nombre: { $regex: nombre, $options: "i" }
+      nombre: { $regex: nombre, $options: "i" } // Búsqueda parcial, insensible a caso
     });
     if (productos.length === 0) {
       return res.status(404).json({ message: "No se encontraron productos con ese nombre" });
@@ -188,6 +226,26 @@ productosController.searchByNombre = async (req, res) => {
     res.status(200).json(productos);
   } catch (error) {
     console.error("Error en búsqueda por nombre:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+/**
+ * GET - Obtener productos por categoría.
+ * @query {string} categoria - Nombre de la categoría
+ */
+productosController.getByCategory = async (req, res) => {
+  try {
+    const { categoria } = req.query;
+    if (!categoria) {
+      return res.status(400).json({ message: "Debe proporcionar una categoría" });
+    }
+    const productos = await productosModel.find({
+      categoria: { $regex: categoria, $options: "i" }
+    });
+    res.status(200).json(productos);
+  } catch (error) {
+    console.error("Error al obtener productos por categoría:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };

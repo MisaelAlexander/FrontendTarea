@@ -1,10 +1,16 @@
-// Array de funciones
+/**
+ * Controller de Comentarios.
+ * Maneja las operaciones CRUD de reseñas/comentarios de productos.
+ */
 const comentariosController = {};
 
 import comentariosModel from "../models/Comentarios.js";
-import productosModel from "../models/Productos.js"; 
+import productosModel from "../models/Productos.js";
 
-// SELECT - Obtener todos los comentarios (con populate de cliente y producto)
+/**
+ * GET - Obtener todos los comentarios.
+ * Populate: nombre y apellido del cliente, nombre y precio del producto.
+ */
 comentariosController.getAllComentarios = async (req, res) => {
     try {
         const comentarios = await comentariosModel.find()
@@ -17,7 +23,10 @@ comentariosController.getAllComentarios = async (req, res) => {
     }
 }
 
-// SELECT BY ID
+/**
+ * GET - Obtener un comentario por ID.
+ * @param {string} req.params.id - ID del comentario
+ */
 comentariosController.getComentariosById = async (req, res) => {
     try {
         const comentario = await comentariosModel.findById(req.params.id)
@@ -33,7 +42,14 @@ comentariosController.getComentariosById = async (req, res) => {
     }
 }
 
-// INSERT
+/**
+ * POST - Crear un nuevo comentario.
+ * @body {string} Titulo - Título del comentario
+ * @body {string} CuerpoComentario - Texto del comentario
+ * @body {number} Resenia - Calificación (1-5)
+ * @body {string} IDCliente - ID del cliente que comenta
+ * @body {string} IDProductos - ID del producto comentado
+ */
 comentariosController.insertComentarios = async (req, res) => {
     try {
         const { Titulo, CuerpoComentario, Resenia, IDCliente, IDProductos } = req.body;
@@ -54,7 +70,10 @@ comentariosController.insertComentarios = async (req, res) => {
     }
 }
 
-// UPDATE
+/**
+ * PUT - Actualizar un comentario existente.
+ * @param {string} req.params.id - ID del comentario
+ */
 comentariosController.updateComentarios = async (req, res) => {
     try {
         const { Titulo, CuerpoComentario, Resenia, IDCliente, IDProductos } = req.body;
@@ -81,7 +100,10 @@ comentariosController.updateComentarios = async (req, res) => {
     }
 }
 
-// DELETE
+/**
+ * DELETE - Eliminar un comentario.
+ * @param {string} req.params.id - ID del comentario
+ */
 comentariosController.deleteComentarios = async (req, res) => {
     try {
         const comentario = await comentariosModel.findByIdAndDelete(req.params.id);

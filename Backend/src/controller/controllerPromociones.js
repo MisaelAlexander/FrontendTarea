@@ -1,14 +1,20 @@
-// Array de funciones
+/**
+ * Controller de Promociones.
+ * Maneja las operaciones CRUD de promociones con descuentos.
+ */
 const promocionesController = {};
 
 import promocionesModel from "../models/Promociones.js";
-import productosModel from "../models/Productos.js"; // Para búsqueda por nombre del producto
+import productosModel from "../models/Productos.js";
 
-// SELECT - Obtener todas las promociones (con populate)
+/**
+ * GET - Obtener todas las promociones.
+ * Populate: nombre y precio de los productos incluidos.
+ */
 promocionesController.getAllPromociones = async (req, res) => {
     try {
         const promociones = await promocionesModel.find()
-            .populate("IDproductos.productos", "nombre precio"); // Trae nombre y precio del producto
+            .populate("IDproductos.productos", "nombre precio");
         return res.status(200).json(promociones);
     } catch (error) {
         console.log("Error: " + error);
@@ -16,7 +22,10 @@ promocionesController.getAllPromociones = async (req, res) => {
     }
 }
 
-// SELECT BY ID
+/**
+ * GET - Obtener una promoción por ID.
+ * @param {string} req.params.id - ID de la promoción
+ */
 promocionesController.getPromocionesById = async (req, res) => {
     try {
         const promocion = await promocionesModel.findById(req.params.id)
@@ -31,13 +40,17 @@ promocionesController.getPromocionesById = async (req, res) => {
     }
 }
 
-// INSERT
+/**
+ * POST - Crear una nueva promoción.
+ * @body {Array} IDproductos - Array de IDs de productos
+ * @body {number} descuento - Porcentaje de descuento
+ * @body {Date} fechaInicio - Fecha de inicio
+ * @body {Date} fechaFinalizacion - Fecha de finalización
+ */
 promocionesController.insertPromociones = async (req, res) => {
     try {
-        // Datos a guardar: IDproductos, descuento, fechaInicio, fechaFinalizacion
         const { IDproductos, descuento, fechaInicio, fechaFinalizacion } = req.body;
 
-        // Crear nueva promoción (sin cálculos adicionales)
         const newPromocion = new promocionesModel({
             IDproductos,
             descuento,
@@ -53,7 +66,10 @@ promocionesController.insertPromociones = async (req, res) => {
     }
 }
 
-// UPDATE
+/**
+ * PUT - Actualizar una promoción existente.
+ * @param {string} req.params.id - ID de la promoción
+ */
 promocionesController.updatePromociones = async (req, res) => {
     try {
         const { IDproductos, descuento, fechaInicio, fechaFinalizacion } = req.body;
@@ -79,7 +95,10 @@ promocionesController.updatePromociones = async (req, res) => {
     }
 }
 
-// DELETE
+/**
+ * DELETE - Eliminar una promoción.
+ * @param {string} req.params.id - ID de la promoción
+ */
 promocionesController.deletePromociones = async (req, res) => {
     try {
         const promocion = await promocionesModel.findByIdAndDelete(req.params.id);
@@ -93,7 +112,11 @@ promocionesController.deletePromociones = async (req, res) => {
     }
 }
 
-// Búsqueda por nombre del producto (buscar promociones que incluyan un producto con cierto nombre)
+/**
+ * POST - Buscar promociones por nombre del producto.
+ * Busca productos con el nombre dado, luego busca promociones que los incluyan.
+ * @body {string} nombre - Nombre del producto a buscar
+ */
 promocionesController.searchByProductoNombre = async (req, res) => {
     try {
         const { nombre } = req.body;
@@ -107,7 +130,7 @@ promocionesController.searchByProductoNombre = async (req, res) => {
         // 2. Obtener los IDs de esos productos
         const productosIds = productos.map(p => p._id);
 
-        // 3. Buscar promociones que tengan al menos uno de esos IDs en IDproductos.productos
+        // 3. Buscar promociones que tengan al menos uno de esos IDs
         const promociones = await promocionesModel.find({
             "IDproductos.productos": { $in: productosIds }
         }).populate("IDproductos.productos", "nombre precio");

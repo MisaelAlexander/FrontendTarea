@@ -1,3 +1,8 @@
+/**
+ * Genera el HTML para el correo de recuperación de contraseña.
+ * @param {string} code - Código de verificación de 6 caracteres
+ * @returns {string} HTML del correo electrónico
+ */
 const HTMLRecoveryEmail = (code) => {
   return `
       <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: 0 auto;">
@@ -9,11 +14,11 @@ const HTMLRecoveryEmail = (code) => {
           ${code}
         </div>
         <p style="font-size: 14px; color: #777; line-height: 1.5;">
-          This code is valid for the next <strong>15 minutes</strong>. If you didn’t request this email, you can safely ignore it.
+          This code is valid for the next <strong>15 minutes</strong>. If you didn't request this email, you can safely ignore it.
         </p>
         <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
         <footer style="font-size: 12px; color: #aaa;">
-          If you need further assistance, please contact our support team at 
+          If you need further assistance, please contact our support team at
           <a href="mailto:support@example.com" style="color: #3498db; text-decoration: none;">support@example.com</a>.
         </footer>
       </div>

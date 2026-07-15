@@ -3,24 +3,29 @@ import {v2 as cloudinary} from "cloudinary";
 import {CloudinaryStorage} from "multer-storage-cloudinary";
 import {config} from "../../config.js";
 
-// #1 Configuramos cloudinary
+/**
+ * Configuración de Cloudinary y Multer para subida de imágenes.
+ * Las imágenes se suben automáticamente a Cloudinary en la carpeta "TechnoMeraki".
+ */
+
+// Paso 1: Configurar Cloudinary con las credenciales del .env
 cloudinary.config({
     cloud_name: config.cloudinary.cloudinary_name,
     api_key: config.cloudinary.cloudinary_api_key,
     api_secret: config.cloudinary.cloudinary_api_secret
 })
 
-// #2 Como guardamos las imagenes
+// Paso 2: Configurar el almacenamiento en Cloudinary
 const storage = new CloudinaryStorage({
     cloudinary,
     params:{
-        folder: "TechnoMeraki",
-        allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4","webp"]
+        folder: "TechnoMeraki", // Carpeta donde se guardan las imágenes
+        allowed_formats: ["jpg", "png", "jpeg", "pdf", "mp4","webp"] // Formatos permitidos
     }
 })
 
-// #3 Configuramos multer
+// Paso 3: Configurar Multer con el almacenamiento de Cloudinary
 const upload = multer({storage});
 
-// #4 Exportamos la configuracion de multer para usarla en el controlador
+// Paso 4: Exportar la configuración de Multer para usarla en las rutas
 export default upload;

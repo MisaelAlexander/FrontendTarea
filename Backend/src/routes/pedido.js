@@ -1,25 +1,31 @@
-// routes/pedidosRoutes.js
 import express from "express";
 import pedidosController from "../controller/controllerPedido.js";
 
+/**
+ * Rutas de Pedidos.
+ * Base: /api/pedido
+ */
 const router = express.Router();
 
-// Obtener todos los pedidos
+// GET / - Obtener todos los pedidos
 router.get("/", pedidosController.getAllPedidos);
 
-// Obtener un pedido por ID
+// GET /cliente/:clienteId - Obtener pedidos de un cliente específico
+router.get("/cliente/:clienteId", pedidosController.getPedidosByCliente);
+
+// GET /:id - Obtener un pedido por ID
 router.get("/:id", pedidosController.getPedidosById);
 
-// Crear un nuevo pedido
+// POST / - Crear un nuevo pedido
 router.post("/", pedidosController.insertPedidos);
 
-// Actualizar un pedido existente
+// PUT /:id - Actualizar un pedido existente
 router.put("/:id", pedidosController.updatePedidos);
 
-// Eliminar un pedido
+// DELETE /:id - Eliminar un pedido
 router.delete("/:id", pedidosController.deletePedidos);
 
-// Búsqueda por tipo de pago
+// POST /search - Buscar pedidos por tipo de pago
 router.post("/search", pedidosController.searchByTipoPago);
 
 export default router;

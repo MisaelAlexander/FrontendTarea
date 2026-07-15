@@ -1,11 +1,20 @@
 import mongoose, { Schema, model } from "mongoose";
 
+/**
+ * Schema de Clientes.
+ * Representa a los usuarios/clientes de la tienda.
+ */
 const ClientesSchema = new Schema(
   {
+    // Nombre del cliente
     nombre: { type: String, required: true, trim: true },
+    // Apellido del cliente
     apellido: { type: String, required: true, trim: true },
+    // Nombre de usuario único para login
     usuario: { type: String, required: true, unique: true, trim: true },
+    // Contraseña hasheada con bcrypt
     contraseña: { type: String, required: true },
+    // Correo electrónico único y válido
     correo: {
       type: String,
       required: true,
@@ -14,18 +23,19 @@ const ClientesSchema = new Schema(
       trim: true,
       match: [/\S+@\S+\.\S+/, "Correo inválido"],
     },
+    // Array de IDs de productos favoritos (referencia a Productos)
     Favoritos: [
       {
         type: Schema.Types.ObjectId,
         ref: "Productos",
       },
     ],
-    isVerified: { type: Boolean, default: false }, // solo este campo adicional
-    // loginAttempts, timeOut opcionales si se quieren implementar después
+    // Indica si el cliente verificó su correo electrónico
+    isVerified: { type: Boolean, default: false },
   },
   {
-    timestamps: true,
-    strict: true,
+    timestamps: true, // Crea automáticamente createdAt y updatedAt
+    strict: true,     // Solo permite guardar campos definidos en el schema
   }
 );
 

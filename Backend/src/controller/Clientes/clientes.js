@@ -82,4 +82,26 @@ clientesCrudController.searchByNombre = async (req, res) => {
   }
 };
 
+// Toggle favorito (agregar/eliminar)
+clientesCrudController.toggleFavorite = async (req, res) => {
+  try {
+    const { productoId } = req.body;
+    const cliente = await clientesModel.findById(req.params.id);
+    if (!cliente) return res.status(404).json({ message: "Cliente no encontrado" });
+
+    const index = cliente.Favoritos.indexOf(productoId);
+    if (index > -1) {
+      cliente.Favoritos.splice(index, 1);
+    } else {
+      cliente.Favoritos.push(productoId);
+    }
+
+    await cliente.save();
+    res.status(200).json({ message: "Favorito actualizado", Favoritos: cliente.Favoritos });
+  } catch (error) {
+    console.error("Error al toggle favorito:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
 export default clientesCrudController;

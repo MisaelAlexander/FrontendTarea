@@ -1,31 +1,47 @@
 import React, { useState } from "react";
-import { User, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Input from "../components/input.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
 import { motion } from "framer-motion";
+import api from "../services/api";
 
 export default function App() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    password: ""
-  });
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Datos del formulario:", formData);
-    alert(`Su nueva contraseña es: ${formData.password}`);
-    navigate("/");
+    setError("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Las contrasenas no coinciden");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("La contrasena debe tener al menos 6 caracteres");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.resetPassword(newPassword, confirmPassword);
+      navigate("/");
+    } catch (err) {
+      setError(err.message || "Error al cambiar contrasena");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,27 +51,51 @@ export default function App() {
         <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/30 w-full max-w-lg">
           <div className="text-center mb-8">
             <h1 className="text-[36px] font-bold text-[#1a365d] tracking-tight">
-              Cambiar Contrasaña
+              Cambiar Contrasena
             </h1>
-            <p className="text-gray-500 mt-1">Cambia tu contraseña a un fuerte</p>
+            <p className="text-gray-500 mt-1">Establece una nueva contrasena segura</p>
           </div>
           <form onSubmit={handleSubmit}>
-
             <Input
-              label="Contraseña"
-              name="password"
-              placeholder="Ingrese su contraseña"
+              label="Nueva Contrasena"
+              name="newPassword"
+              placeholder="Ingrese su nueva contrasena"
               type={showPassword ? "text" : "password"}
               icon={showPassword ? EyeOff : Eye}
               onIconClick={togglePasswordVisibility}
-              value={formData.password}
-              onChange={handleChange}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
             />
+
+            <Input
+              label="Confirmar Contrasena"
+              name="confirmPassword"
+              placeholder="Confirme su nueva contrasena"
+              type={showPassword ? "text" : "password"}
+              icon={showPassword ? EyeOff : Eye}
+              onIconClick={togglePasswordVisibility}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+
+            {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
+
             <div className="text-center mb-8">
-              
+              <p className="text-gray-500 mt-1">
+                <a
+                  href="/"
+                  className="text-[#1a365d] hover:underline decoration-2 underline-offset-2 decoration-[#0a1c33] transition-all active:text-[#0a1c33] font-medium"
+                >
+                  Volver al login
+                </a>
+              </p>
             </div>
             <div className="flex justify-center mt-4">
-              <Button type="submit">Aceptar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Guardando..." : "Guardar Contrasena"}
+              </Button>
             </div>
           </form>
         </div>

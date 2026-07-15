@@ -1,8 +1,15 @@
-// controller/controllerBanner.js
+/**
+ * Controller de Banner.
+ * Maneja las operaciones CRUD de banners promocionales.
+ * Cada banner tiene una imagen de fondo y un producto asociado.
+ */
 import bannerModel from "../models/Banner.js";
 import { v2 as cloudinary } from "cloudinary";
 
-// Función auxiliar para eliminar imagen de Cloudinary
+/**
+ * Función auxiliar para eliminar imagen de Cloudinary.
+ * @param {string} publicId - ID público de la imagen
+ */
 const eliminarImagenCloudinary = async (publicId) => {
   if (publicId) {
     try {
@@ -15,11 +22,14 @@ const eliminarImagenCloudinary = async (publicId) => {
 
 const bannerController = {};
 
-// SELECT - Obtener todos los banners (con populate del producto)
+/**
+ * GET - Obtener todos los banners.
+ * Populate: nombre, precio y descripción del producto asociado.
+ */
 bannerController.getAllBanners = async (req, res) => {
   try {
     const banners = await bannerModel.find()
-      .populate("idProducto", "nombre precio descripcion"); // agregué descripción para la tabla
+      .populate("idProducto", "nombre precio descripcion");
     return res.status(200).json(banners);
   } catch (error) {
     console.log("Error: " + error);
@@ -27,7 +37,10 @@ bannerController.getAllBanners = async (req, res) => {
   }
 };
 
-// SELECT BY ID
+/**
+ * GET - Obtener un banner por ID.
+ * @param {string} req.params.id - ID del banner
+ */
 bannerController.getBannerById = async (req, res) => {
   try {
     const banner = await bannerModel.findById(req.params.id)
@@ -42,7 +55,12 @@ bannerController.getBannerById = async (req, res) => {
   }
 };
 
-// INSERT - ahora recibe archivo de imagen
+/**
+ * POST - Crear un nuevo banner.
+ * Recibe imagen de fondo subida a Cloudinary y ID del producto.
+ * @body {string} idProducto - ID del producto asociado
+ * @file {File} FotoFondo - Imagen de fondo del banner
+ */
 bannerController.insertBanner = async (req, res) => {
   try {
     const { idProducto } = req.body;
@@ -69,7 +87,11 @@ bannerController.insertBanner = async (req, res) => {
   }
 };
 
-// UPDATE - ahora recibe archivo de imagen y elimina el anterior
+/**
+ * PUT - Actualizar un banner.
+ * Elimina la imagen anterior de Cloudinary si se sube una nueva.
+ * @param {string} req.params.id - ID del banner
+ */
 bannerController.updateBanner = async (req, res) => {
   try {
     const { idProducto } = req.body;
@@ -103,7 +125,11 @@ bannerController.updateBanner = async (req, res) => {
   }
 };
 
-// DELETE - ahora elimina también la imagen de Cloudinary
+/**
+ * DELETE - Eliminar un banner.
+ * Elimina también la imagen de Cloudinary.
+ * @param {string} req.params.id - ID del banner
+ */
 bannerController.deleteBanner = async (req, res) => {
   try {
     const banner = await bannerModel.findById(req.params.id);

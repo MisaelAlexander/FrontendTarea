@@ -7,7 +7,7 @@ import React, { useState, useRef } from "react";
  * @param {function} onComplete - Callback que se ejecuta cuando el PIN está completo, recibe el código como string
  */
 const PinInput = ({ length = 5, onComplete }) => {
-  // Estado: array de strings, cada posición representa un dígito. Inicialmente todos vacíos.
+  // Estado: array de strings, cada posición representa un dígito. Inicialmente xtodos vacíos.
   const [pin, setPin] = useState(Array(length).fill(""));
   
   // useRef: almacena referencias a los inputs para poder enfocarlos manualmente
@@ -20,8 +20,7 @@ const PinInput = ({ length = 5, onComplete }) => {
    */
   const handleChange = (e, index) => {
     const value = e.target.value;
-    // Validación: solo se permiten números (expresión regular)
-    if (!/^[0-9]*$/.test(value)) return;
+    
 
     // Copiamos el estado actual del PIN
     const newPin = [...pin];

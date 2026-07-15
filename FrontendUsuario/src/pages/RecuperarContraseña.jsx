@@ -1,26 +1,29 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ← Cambia "react-router" a "react-router-dom"
+import { useNavigate } from "react-router-dom";
 import Input from "../components/input.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
 import { motion } from "framer-motion";
+import api from "../services/api";
 
 export default function App() {
-  const navigate = useNavigate(); // ← Ejecuta el hook para obtener la función
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+  const navigate = useNavigate();
+  const [correo, setCorreo] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Datos del formulario:", formData);
-    alert(`Registro enviado con: ${formData.email}`);
-    navigate("/codigo-correo"); // ← Ahora funciona
+    setError("");
+    setLoading(true);
+    try {
+      await api.requestRecoveryCode(correo);
+      navigate("/codigo-correo");
+    } catch (err) {
+      setError(err.message || "Error al solicitar codigo");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,20 +33,21 @@ export default function App() {
         <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/30 w-full max-w-lg">
           <div className="text-center mb-8">
             <h1 className="text-[36px] font-bold text-[#1a365d] tracking-tight">
-              Ingrese Correo
+              Recuperar Contrasena
             </h1>
-            <p className="text-gray-500 mt-1">Este fue enviado a su correo</p>
+            <p className="text-gray-500 mt-1">Ingrese su correo para recibir el codigo</p>
           </div>
           <form onSubmit={handleSubmit}>
             <Input
-              label="Email"
-              name="email"
+              label="Correo"
+              name="correo"
               type="email"
               placeholder="Ingrese su correo"
-              value={formData.email}
-              onChange={handleChange}
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
               required
             />
+            {error && <p className="text-red-500 text-sm text-center mt-4">{error}</p>}
             <div className="text-center mb-8">
               <p className="text-gray-500 mt-1">
                 <a
@@ -55,7 +59,9 @@ export default function App() {
               </p>
             </div>
             <div className="flex justify-center mt-4">
-              <Button type="submit">Avanzar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Enviando..." : "Enviar Codigo"}
+              </Button>
             </div>
           </form>
         </div>

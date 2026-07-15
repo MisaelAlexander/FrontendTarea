@@ -14,4 +14,7 @@ router.route("/:id")
   .put(clientesCrudController.updateCliente)
   .delete(clientesCrudController.deleteCliente);
 
+router.route("/:id/favoritos")
+  .put(clientesCrudController.toggleFavorite);
+
 export default router;

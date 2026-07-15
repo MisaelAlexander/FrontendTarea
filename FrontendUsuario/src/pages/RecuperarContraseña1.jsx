@@ -4,30 +4,35 @@ import PinInput from "../components/pinInput.jsx";
 import Button from "../components/button.jsx";
 import CircleAnimation from "../components/Animations/CircleAnimation.jsx";
 import { motion } from "framer-motion";
+import api from "../services/api";
 
 export default function App() {
   const navigate = useNavigate();
-  const [pinCompleto, setPinCompleto] = useState(""); // string vacío al inicio
-  const [mensaje, setMensaje] = useState("");
+  const [pinCompleto, setPinCompleto] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handlePinComplete = (codigo) => {
     setPinCompleto(codigo);
-    console.log("PIN ingresado:", codigo);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault(); // ¡IMPORTANTE! Evita recargar la página
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
 
-    if (pinCompleto.length === 5) {
-      setMensaje("Verificando código...");
-      setTimeout(() => {
-        setMensaje(`Código ${pinCompleto} validado correctamente.`);
-        // Redirige después de la validación (puedo ajustar el tiempo)
-        navigate("/nueva-contraseña"); 
-      }, 2000);
-    } else {
-      setMensaje("Por favor, ingresa los 5 dígitos del PIN.");
-      setTimeout(() => setMensaje(""), 3000);
+    if (pinCompleto.length !== 6) {
+      setError("Por favor, ingresa los 6 digitos del codigo.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.verifyRecoveryCode(pinCompleto);
+      navigate("/nueva-contraseña");
+    } catch (err) {
+      setError(err.message || "Error al verificar codigo");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,18 +43,18 @@ export default function App() {
         <div className="bg-white/40 backdrop-blur-md p-8 sm:p-12 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-white/30 w-full max-w-lg">
           <div className="text-center mb-8">
             <h1 className="text-[36px] font-bold text-[#1a365d] tracking-tight">
-              Ingrese Pin
+              Verificar Codigo
             </h1>
-            <p className="text-gray-500 mt-1">Este fue enviado a su correo</p>
+            <p className="text-gray-500 mt-1">Ingrese el codigo enviado a su correo</p>
           </div>
           <form onSubmit={handleSubmit}>
             <div className="bg-[#d2e3fc]/60 backdrop-blur-sm rounded-2xl p-6 sm:p-8 mb-6 border border-white/40 shadow-inner">
-              <p className="text-center text-gray-600 font-medium mb-2">Digite el PIN:</p>
-              <PinInput length={5} onComplete={handlePinComplete} />
+              <p className="text-center text-gray-600 font-medium mb-2">Digite el codigo:</p>
+              <PinInput length={6} onComplete={handlePinComplete} />
             </div>
-            {mensaje && (
-              <div className="text-center mb-4 text-sm font-medium text-gray-700">
-                {mensaje}
+            {error && (
+              <div className="text-center mb-4 text-sm font-medium text-red-500">
+                {error}
               </div>
             )}
             <div className="text-center mb-8">
@@ -63,7 +68,9 @@ export default function App() {
               </p>
             </div>
             <div className="flex justify-center mt-4">
-              <Button type="submit">Avanzar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? "Verificando..." : "Verificar Codigo"}
+              </Button>
             </div>
           </form>
         </div>

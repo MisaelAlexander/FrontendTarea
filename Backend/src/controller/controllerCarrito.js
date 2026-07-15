@@ -1,15 +1,22 @@
-// Array de funciones
+/**
+ * Controller de Carrito.
+ * Maneja las operaciones CRUD del carrito de compras.
+ * Calcula subtotales, totales y descuentos automáticamente.
+ */
 const carritoController = {};
 
 import carritoModel from "../models/Carrito.js";
 import productosModel from "../models/Productos.js";
 
-// SELECT - Obtener todos los carritos (con populate de cliente y productos)
+/**
+ * GET - Obtener todos los carritos.
+ * Populate: cliente (nombre, email) y productos (nombre, precio, imágenes, stock, descuento).
+ */
 carritoController.getAllCarritos = async (req, res) => {
     try {
         const carritos = await carritoModel.find()
-            .populate("IDCliente", "nombre email") // Trae nombre y email del cliente
-            .populate("Productos.IDProducto", "nombre precio"); // Trae nombre y precio del producto
+            .populate("IDCliente", "nombre email")
+            .populate("Productos.IDProducto", "nombre precio imagenesProductos stock descuento");
         return res.status(200).json(carritos);
     } catch (error) {
         console.log("Error: " + error);
@@ -17,12 +24,15 @@ carritoController.getAllCarritos = async (req, res) => {
     }
 }
 
-// SELECT BY ID
+/**
+ * GET - Obtener un carrito por ID.
+ * @param {string} req.params.id - ID del carrito
+ */
 carritoController.getCarritoById = async (req, res) => {
     try {
         const carrito = await carritoModel.findById(req.params.id)
             .populate("IDCliente", "nombre email")
-            .populate("Productos.IDProducto", "nombre precio");
+            .populate("Productos.IDProducto", "nombre precio imagenesProductos stock descuento");
         if (!carrito) {
             return res.status(404).json({ message: "Carrito no encontrado" });
         }
@@ -33,7 +43,13 @@ carritoController.getCarritoById = async (req, res) => {
     }
 }
 
-// INSERT
+/**
+ * POST - Crear un nuevo carrito.
+ * Calcula automáticamente los subtotales y totales basándose en los precios de la BD.
+ * @body {string} IDCliente - ID del cliente propietario
+ * @body {Array} Productos - Array de { IDProducto, amount }
+ * @body {number} [Descuento] - Porcentaje de descuento (opcional)
+ */
 carritoController.insertCarrito = async (req, res) => {
     try {
         const { IDCliente, Productos, Descuento } = req.body;
@@ -49,7 +65,7 @@ carritoController.insertCarrito = async (req, res) => {
                 return res.status(404).json({ message: `Producto ${Productos[i].IDProducto} no encontrado` });
             }
 
-            // Calcular subtotal para este producto
+            // Calcular subtotal para este producto (precio × cantidad)
             const subtotal = productoEncontrado.precio * Productos[i].amount;
             total += subtotal;
 
@@ -75,14 +91,18 @@ carritoController.insertCarrito = async (req, res) => {
         });
 
         await nuevoCarrito.save();
-        return res.status(200).json({ message: "Carrito creado" });
+        return res.status(200).json({ message: "Carrito creado", carrito: nuevoCarrito });
     } catch (error) {
         console.log("Error: " + error);
         return res.status(500).json({ message: "Internal server error", error });
     }
 }
 
-// UPDATE
+/**
+ * PUT - Actualizar un carrito existente.
+ * Recalcula todos los subtotales y totales.
+ * @param {string} req.params.id - ID del carrito
+ */
 carritoController.updateCarrito = async (req, res) => {
     try {
         const { IDCliente, Productos, Descuento } = req.body;
@@ -134,7 +154,10 @@ carritoController.updateCarrito = async (req, res) => {
     }
 }
 
-// DELETE
+/**
+ * DELETE - Eliminar un carrito.
+ * @param {string} req.params.id - ID del carrito
+ */
 carritoController.deleteCarrito = async (req, res) => {
     try {
         const carrito = await carritoModel.findByIdAndDelete(req.params.id);

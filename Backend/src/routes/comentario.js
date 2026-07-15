@@ -1,22 +1,25 @@
-// routes/comentariosRoutes.js
 import express from "express";
 import comentariosController from "../controller/controllerComentario.js";
 
+/**
+ * Rutas de Comentarios.
+ * Base: /api/comentario
+ */
 const router = express.Router();
 
-// Obtener todos los comentarios
+// GET / - Obtener todos los comentarios
 router.get("/", comentariosController.getAllComentarios);
 
-// Obtener un comentario por ID
+// GET /:id - Obtener un comentario por ID
 router.get("/:id", comentariosController.getComentariosById);
 
-// Crear un nuevo comentario
+// POST / - Crear un nuevo comentario
 router.post("/", comentariosController.insertComentarios);
 
-// Actualizar un comentario existente
+// PUT /:id - Actualizar un comentario existente
 router.put("/:id", comentariosController.updateComentarios);
 
-// Eliminar un comentario
+// DELETE /:id - Eliminar un comentario
 router.delete("/:id", comentariosController.deleteComentarios);
 
 export default router;
