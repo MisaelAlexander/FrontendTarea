@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { User, Eye, EyeOff } from "lucide-react";
 import Input from "../components/input.jsx";
 import Button from "../components/button.jsx";
