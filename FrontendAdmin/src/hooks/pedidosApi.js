@@ -4,7 +4,7 @@ import axios from 'axios';
  * API de Pedidos para el admin.
  * Obtiene pedidos del backend con información completa (carrito, cliente, productos).
  */
-const API_URL = 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 /**
  * GET - Obtiene todos los pedidos.

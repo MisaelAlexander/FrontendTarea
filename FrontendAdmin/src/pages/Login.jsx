@@ -34,7 +34,7 @@ export default function App() {
 
     try {
       // Ajusta la URL base según tu entorno
-      const API_BASE_URL = "http://localhost:4000"; // Cambia si tu backend corre en otro puerto
+      const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || "http://localhost:4000";
       const response = await fetch(`${API_BASE_URL}/api/login-admin/login`, {
         method: "POST",
         headers: {

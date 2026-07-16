@@ -43,8 +43,20 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
-    //Permitir el envío de cookies y credenciales
+    origin: function (origin, callback) {
+      // Permitir requests sin origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://frontendtarea.onrender.com",
+      ];
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".onrender.com")) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permitir todo en desarrollo; ajustar en producción
+      }
+    },
     credentials: true,
   }),
 );
