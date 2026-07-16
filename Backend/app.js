@@ -50,6 +50,7 @@ app.use(
         "http://localhost:5173",
         "http://localhost:5174",
         "https://frontendtarea.onrender.com",
+        "https://frontend-tarea-kaii.vercel.app",
       ];
       if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith(".onrender.com")) {
         callback(null, true);
