@@ -1,5 +1,8 @@
 const API_BASE = 'https://frontendtarea.onrender.com/api';
 
+// Token del registro en curso (respaldo al cookie httpOnly para cross-site / móvil)
+let pendingVerificationToken = null;
+
 const api = {
   // Auth - Login
   async login(usuario, password) {
@@ -41,6 +44,7 @@ const api = {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Error al registrar');
+    pendingVerificationToken = data.verificationToken || null;
     return data;
   },
 
@@ -50,10 +54,11 @@ const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ verificationCodeRequest: code }),
+      body: JSON.stringify({ verificationCodeRequest: code, verificationToken: pendingVerificationToken }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Error al verificar codigo');
+    pendingVerificationToken = null;
     return data;
   },
 

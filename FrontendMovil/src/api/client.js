@@ -3,6 +3,9 @@
 export const API_BASE =
   process.env.EXPO_PUBLIC_API_URL || 'https://frontendtarea.onrender.com/api';
 
+// Token del registro en curso (el móvil no maneja cookies httpOnly)
+let pendingVerificationToken = null;
+
 async function handle(res, fallbackMsg) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.message || fallbackMsg);
@@ -32,16 +35,20 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, apellido, usuario, contraseña: password, correo }),
     });
-    return handle(res, 'Error al registrar');
+    const data = await handle(res, 'Error al registrar');
+    pendingVerificationToken = data.verificationToken || null;
+    return data;
   },
 
   async verifyRegisterCode(code) {
     const res = await fetch(`${API_BASE}/registrar-cliente/verify-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ verificationCodeRequest: code }),
+      body: JSON.stringify({ verificationCodeRequest: code, verificationToken: pendingVerificationToken }),
     });
-    return handle(res, 'Error al verificar código');
+    const data = await handle(res, 'Error al verificar código');
+    pendingVerificationToken = null;
+    return data;
   },
 
   async requestRecoveryCode(correo) {

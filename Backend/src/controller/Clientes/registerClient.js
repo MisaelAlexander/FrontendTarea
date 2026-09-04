@@ -43,30 +43,44 @@ registerClient.register = async (req, res) => {
 
     const token = jwt.sign(tokenData, config.JWT.secret, { expiresIn: "15m" });
 
-    // Guardar token en cookie (httpOnly, expira en 15 min)
+    // Guardar token en cookie (httpOnly, expira en 15 min).
+    // sameSite none + secure en producción para que la cookie viaje cross-site (Vercel -> Render).
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("clientVerificationToken", token, {
       httpOnly: true,
       maxAge: 15 * 60 * 1000,
+      sameSite: isProd ? "none" : "lax",
+      secure: isProd,
     });
 
-    // Enviar correo con el código
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: config.email.user_email,
-        pass: config.email.user_password,
-      },
+    // Enviar correo con el código (error de correo no debe enmascararse como 500 genérico)
+    try {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: config.email.user_email,
+          pass: config.email.user_password,
+        },
+      });
+
+      const mailOptions = {
+        from: config.email.user_email,
+        to: correo,
+        subject: "Verificación de cuenta - TechnoMeraki",
+        text: `Hola ${nombre}, tu código de verificación es: ${verificationCode}. Válido por 15 minutos.`,
+      };
+
+      await transporter.sendMail(mailOptions);
+    } catch (mailError) {
+      console.error("Error enviando correo de verificación:", mailError);
+      return res.status(502).json({ message: "No se pudo enviar el correo de verificación. Revisa el correo e intenta más tarde." });
+    }
+
+    // Se devuelve el token también en el cuerpo para clientes sin cookies (móvil, cross-site)
+    res.status(200).json({
+      message: "Código enviado. Revisa tu correo para completar el registro.",
+      verificationToken: token,
     });
-
-    const mailOptions = {
-      from: config.email.user_email,
-      to: correo,
-      subject: "Verificación de cuenta - TechnoMeraki",
-      text: `Hola ${nombre}, tu código de verificación es: ${verificationCode}. Válido por 15 minutos.`,
-    };
-
-    await transporter.sendMail(mailOptions);
-    res.status(200).json({ message: "Código enviado. Revisa tu correo para completar el registro." });
   } catch (error) {
     console.error("Error en registro:", error);
     res.status(500).json({ message: "Error interno del servidor" });
@@ -76,8 +90,9 @@ registerClient.register = async (req, res) => {
 // Paso 2: Verificar código y crear cliente en BD
 registerClient.verifyCode = async (req, res) => {
   try {
-    const { verificationCodeRequest } = req.body;
-    const token = req.cookies.clientVerificationToken;
+    const { verificationCodeRequest, verificationToken } = req.body;
+    // Acepta el token del cuerpo (móvil / cross-site sin cookies) o de la cookie (web mismo sitio)
+    const token = verificationToken || req.cookies?.clientVerificationToken;
 
     if (!token) {
       return res.status(400).json({ message: "No hay proceso de registro activo. Regístrate nuevamente." });
