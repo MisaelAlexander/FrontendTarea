@@ -41,7 +41,7 @@ export function useRegistro() {
     setLoading(true);
     try {
       await api.register(data.nombre, data.apellido, data.usuario, data.password, data.correo);
-      setStep(2);
+      navigate('/login');
     } catch (err) {
       setError(err.message || 'Error al registrar');
     } finally {

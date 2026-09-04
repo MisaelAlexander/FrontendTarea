@@ -1,13 +1,11 @@
 import clientesModel from "../../models/Clientes.js";
 import bcrypt from "bcryptjs";
-import nodemailer from "nodemailer";
-import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { config } from "../../../config.js";
 
 const registerClient = {};
 
-// Paso 1: Registrar (solicitar datos, enviar código por correo, guardar token en cookie)
+// Paso 1: Registro directo (sin correo de verificación)
 registerClient.register = async (req, res) => {
   try {
     const { nombre, apellido, usuario, contraseña, correo } = req.body;
@@ -17,7 +15,7 @@ registerClient.register = async (req, res) => {
       return res.status(400).json({ message: "Todos los campos son obligatorios" });
     }
 
-    // Verificar si ya existe usuario o correo (incluso no verificados)
+    // Verificar si ya existe usuario o correo
     const existente = await clientesModel.findOne({
       $or: [{ usuario }, { correo: correo.toLowerCase() }],
     });
@@ -25,64 +23,27 @@ registerClient.register = async (req, res) => {
       return res.status(400).json({ message: "El usuario o correo ya está registrado" });
     }
 
-    // Generar código de verificación (6 dígitos)
-    const verificationCode = crypto.randomInt(100000, 999999).toString();
-
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(contraseña, 10);
 
-    // Crear token JWT que contiene todos los datos y el código
-    const tokenData = {
+    // Crear cliente directamente (sin verificación por correo)
+    const nuevoCliente = new clientesModel({
       nombre,
       apellido,
       usuario,
+      contraseña: hashedPassword,
       correo: correo.toLowerCase(),
-      password: hashedPassword,
-      verificationCode,
-    };
-
-    const token = jwt.sign(tokenData, config.JWT.secret, { expiresIn: "15m" });
-
-    // Guardar token en cookie (httpOnly, expira en 15 min).
-    // sameSite none + secure en producción para que la cookie viaje cross-site (Vercel -> Render).
-    const isProd = process.env.NODE_ENV === "production";
-    res.cookie("clientVerificationToken", token, {
-      httpOnly: true,
-      maxAge: 15 * 60 * 1000,
-      sameSite: isProd ? "none" : "lax",
-      secure: isProd,
+      isVerified: true,
+      Favoritos: [],
     });
 
-    // Enviar correo con el código (error de correo no debe enmascararse como 500 genérico)
-    try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: config.email.user_email,
-          pass: config.email.user_password,
-        },
-      });
-
-      const mailOptions = {
-        from: config.email.user_email,
-        to: correo,
-        subject: "Verificación de cuenta - TechnoMeraki",
-        text: `Hola ${nombre}, tu código de verificación es: ${verificationCode}. Válido por 15 minutos.`,
-      };
-
-      await transporter.sendMail(mailOptions);
-    } catch (mailError) {
-      console.error("Error enviando correo de verificación:", mailError);
-      return res.status(502).json({ message: "No se pudo enviar el correo de verificación. Revisa el correo e intenta más tarde." });
-    }
-
-    // Se devuelve el token también en el cuerpo para clientes sin cookies (móvil, cross-site)
-    res.status(200).json({
-      message: "Código enviado. Revisa tu correo para completar el registro.",
-      verificationToken: token,
-    });
+    await nuevoCliente.save();
+    res.status(201).json({ message: "Cuenta registrada exitosamente. Ya puedes iniciar sesión." });
   } catch (error) {
     console.error("Error en registro:", error);
+    if (error?.code === 11000) {
+      return res.status(400).json({ message: "El usuario o correo ya está registrado" });
+    }
     res.status(500).json({ message: "Error interno del servidor" });
   }
 };
