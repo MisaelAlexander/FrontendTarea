@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = 'https://frontendtarea.onrender.com/api';
 
 export const getAdministradores = async () => {
   const res = await axios.get(`${API_URL}/admin`);

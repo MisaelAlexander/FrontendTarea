@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || "http://localhost:4000";
+const API_URL = 'https://frontendtarea.onrender.com';
 
 // 1. Solicitar código al correo (POST /api/recuperar-admin/request-code)
 export const requestCode = async (correo) => {

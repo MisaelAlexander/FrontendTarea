@@ -42,7 +42,7 @@ export function useLoginAdmin() {
     setError("");
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || "http://localhost:4000";
+      const API_BASE_URL = 'https://frontendtarea.onrender.com';
       const response = await fetch(`${API_BASE_URL}/api/login-admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
