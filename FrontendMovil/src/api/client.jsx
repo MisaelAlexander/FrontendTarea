@@ -125,13 +125,31 @@ const api = {
     return handle(res, 'Error al actualizar carrito');
   },
 
-  async createOrder(cartId, tipoPago = 'card') {
+  async createOrder(cartId, tipoPago = 'card', extras = {}) {
     const res = await fetch(`${API_BASE}/pedido`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idCarrito: cartId, tipoPago }),
+      body: JSON.stringify({ idCarrito: cartId, tipoPago, ...extras }),
     });
     return handle(res, 'Error al crear pedido');
+  },
+
+  async getClient(clientId) {
+    const res = await fetch(`${API_BASE}/cliente/${clientId}`);
+    return handle(res, 'Error al obtener cliente');
+  },
+
+  // Wompi - Cobro directo con tarjeta (el backend maneja el token OAuth).
+  // payload: { monto, emailCliente, nombreCliente, tarjeta: { numeroTarjeta, cvv, mesVencimiento, anioVencimiento }, formaPago, cantidadCuotas, idExterno }
+  async wompiCobro(payload) {
+    const res = await fetch(`${API_BASE}/wompi/cobro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.mensaje || 'Error en el cobro');
+    return data;
   },
 
   async getOrdersByClient(clientId) {

@@ -23,6 +23,10 @@ const Pagos = () => {
     setIsPlazos,             // Función para toggle plazos
     loading,                 // Estado de procesamiento
     orderData,               // Datos del pedido (entrega, dirección)
+    cardNumber, setCardNumber,
+    expDate, setExpDate,
+    cvc, setCvc,
+    cuotas, setCuotas,
     handlePayment,           // Función para procesar el pago
   } = usePagos();
 
@@ -103,27 +107,33 @@ const Pagos = () => {
                           type="text"
                           placeholder="0000 0000 0000 0000"
                           maxLength={19}
+                          value={cardNumber}
+                          onChange={(e) => setCardNumber(e.target.value)}
                           className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha (MM/AA)</label>
-                          <input
-                            type="text"
-                            placeholder="MM/AA"
-                            maxLength={5}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
-                          />
+                            <input
+                              type="text"
+                              placeholder="MM/AA"
+                              maxLength={5}
+                              value={expDate}
+                              onChange={(e) => setExpDate(e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
+                            />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">CVC</label>
-                          <input
-                            type="text"
-                            placeholder="123"
-                            maxLength={4}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
-                          />
+                            <input
+                              type="text"
+                              placeholder="123"
+                              maxLength={4}
+                              value={cvc}
+                              onChange={(e) => setCvc(e.target.value)}
+                              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
+                            />
                         </div>
                       </div>
                       {/* Checkbox de pago a plazos */}
@@ -139,11 +149,15 @@ const Pagos = () => {
                       </div>
                       {/* Select de cuotas (solo si está activado) */}
                       {isPlazos && (
-                        <select className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]">
-                          <option>3 Cuotas sin intereses</option>
-                          <option>6 Cuotas sin intereses</option>
-                          <option>9 Cuotas sin intereses</option>
-                          <option>12 Cuotas sin intereses</option>
+                        <select
+                          value={cuotas}
+                          onChange={(e) => setCuotas(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
+                        >
+                          <option value="3">3 Cuotas sin intereses</option>
+                          <option value="6">6 Cuotas sin intereses</option>
+                          <option value="9">9 Cuotas sin intereses</option>
+                          <option value="12">12 Cuotas sin intereses</option>
                         </select>
                       )}
                     </div>

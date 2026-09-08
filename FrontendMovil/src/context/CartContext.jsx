@@ -108,9 +108,9 @@ export const CartProvider = ({ children }) => {
     setCartId(null);
   };
 
-  const checkout = async (tipoPago = 'card') => {
+  const checkout = async (tipoPago = 'card', extras = {}) => {
     if (!cartId) throw new Error('No hay carrito para procesar');
-    await api.createOrder(cartId, tipoPago);
+    await api.createOrder(cartId, tipoPago, extras);
     clearCart();
   };
 

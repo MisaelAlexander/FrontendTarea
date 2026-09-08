@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
+import api from '../services/api';
 
 /**
  * Hook para la página Pagos.
- * Maneja: método de pago, datos de pedido desde localStorage, proceso de pago.
+ * Maneja: método de pago, datos de pedido desde localStorage, cobro Wompi con tarjeta.
  */
 export function usePagos() {
   // Navegador para redirecciones
   const navigate = useNavigate();
   // Datos del carrito y función de checkout del contexto
-  const { cartItems, total, subtotal, checkout } = useCart();
+  const { cartItems, cartId, total, subtotal, checkout } = useCart();
+  // Usuario autenticado (para correo/nombre del cobro)
+  const { user } = useAuth();
   // Sistema de notificaciones
   const toast = useToast();
 
@@ -23,6 +27,12 @@ export function usePagos() {
   const [loading, setLoading] = useState(false);
   // Estado: datos del pedido guardados en checkout anterior
   const [orderData, setOrderData] = useState(null);
+
+  // Formulario de tarjeta (cargo directo Wompi)
+  const [cardNumber, setCardNumber] = useState('');
+  const [expDate, setExpDate] = useState('');
+  const [cvc, setCvc] = useState('');
+  const [cuotas, setCuotas] = useState('3');
 
   /**
    * Efecto: carga los datos del pedido desde localStorage.
@@ -39,27 +49,108 @@ export function usePagos() {
 
   /**
    * Calcula el descuento total aplicado a todos los items del carrito.
-   * Recorre cada item y suma los descuentos individuales.
    */
   const descuento = cartItems.reduce((sum, item) => {
     const price = Number(item.price) || 0;
     const desc = Number(item.descuento) || 0;
     const subtotalItem = price * item.quantity;
-    // Solo aplica descuento si es mayor a 0
     return sum + (desc > 0 ? subtotalItem * (desc / 100) : 0);
   }, 0); // Acumulador inicial en 0
 
   /**
-   * Procesa el pago y redirige a la página de pedidos.
-   * Limpia los datos del pedido de localStorage después del pago exitoso.
+   * Confirma un pedido sin tarjeta (efectivo, bitcoin, transferencia).
+   */
+  const confirmOfflineOrder = async () => {
+    await checkout(paymentMethod);
+    localStorage.removeItem('orderData');
+    toast.success('Pedido confirmado con exito!');
+    navigate('/pedidos');
+  };
+
+  /**
+   * Cobra con tarjeta vía Wompi (cargo directo) y luego crea el pedido.
+   */
+  const payWithCard = async () => {
+    const digits = cardNumber.replace(/\D/g, '');
+    if (digits.length < 15) {
+      toast.warning('Número de tarjeta inválido');
+      return;
+    }
+    const m = expDate.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
+    if (!m) {
+      toast.warning('Fecha inválida (usa MM/AA)');
+      return;
+    }
+    if (!/^\d{3,4}$/.test(cvc.trim())) {
+      toast.warning('CVC inválido');
+      return;
+    }
+
+    // Datos del cliente para el cobro
+    let emailCliente = '';
+    let nombreCliente = user?.nombre || user?.usuario || 'Cliente';
+    try {
+      if (user?.id) {
+        const client = await api.getClient(user.id);
+        emailCliente = client.correo || '';
+        nombreCliente = `${client.nombre || ''} ${client.apellido || ''}`.trim() || nombreCliente;
+      }
+    } catch {
+      // Sigue con los datos básicos
+    }
+    if (!emailCliente) {
+      toast.warning('No se encontró el correo del cliente');
+      return;
+    }
+
+    const cobro = await api.wompiCobro({
+      monto: Number(total),
+      emailCliente,
+      nombreCliente,
+      tarjeta: {
+        numeroTarjeta: digits,
+        cvv: cvc.trim(),
+        mesVencimiento: Number(m[1]),
+        anioVencimiento: Number(m[2]),
+      },
+      formaPago: isPlazos ? 2 : 0,
+      cantidadCuotas: isPlazos ? Number(cuotas) : undefined,
+      idExterno: cartId,
+    });
+
+    // Si Wompi pide autenticación 3DS en otra página, abrirla
+    const redirectUrl = cobro.urlAutenticacion || cobro.url || cobro.redirectUrl;
+    if (!cobro.esAprobada && redirectUrl) {
+      window.open(redirectUrl, '_blank');
+      toast.warning('Completa la verificación 3DS en la ventana abierta');
+      return;
+    }
+
+    if (!cobro.esAprobada) {
+      throw new Error(cobro.mensaje || 'Pago rechazado por el banco');
+    }
+
+    await checkout('card', {
+      idTransaccionWompi: cobro.idTransaccion,
+      codigoAutorizacion: cobro.codigoAutorizacion,
+      estadoPago: 'aprobada',
+    });
+    localStorage.removeItem('orderData');
+    toast.success(`Pago aprobado (aut. ${cobro.codigoAutorizacion || 'N/A'})`);
+    navigate('/pedidos');
+  };
+
+  /**
+   * Procesa el pago según el método y redirige a pedidos.
    */
   const handlePayment = async () => {
     setLoading(true);
     try {
-      await checkout(paymentMethod); // Llama al checkout del contexto del carrito
-      localStorage.removeItem('orderData'); // Limpia datos temporales
-      toast.success('Pedido confirmado con exito!');
-      navigate('/pedidos'); // Redirige a pedidos
+      if (paymentMethod === 'card') {
+        await payWithCard();
+      } else {
+        await confirmOfflineOrder();
+      }
     } catch (err) {
       toast.error('Error al confirmar el pedido: ' + err.message);
     } finally {
@@ -78,6 +169,10 @@ export function usePagos() {
     setIsPlazos,             // Setter de plazos
     loading,                 // Estado de procesamiento
     orderData,               // Datos del pedido desde localStorage
-    handlePayment,           // Función para procesar pago
+    cardNumber, setCardNumber,
+    expDate, setExpDate,
+    cvc, setCvc,
+    cuotas, setCuotas,
+    handlePayment,           // Función para procesar el pago
   };
 }

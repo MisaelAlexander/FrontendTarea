@@ -36,6 +36,9 @@ import repartidoresRoutes from "./src/routes/repartidores.js";
 //VENDEDORES
 import vendedoresRoutes from "./src/routes/vendedores.js";
 //VENDEDORES
+//WOMPI
+import wompiRoutes from "./src/routes/wompi.js";
+//WOMPI
 
 import limiter from "./src/middlewares/limiter.js";
 //Ejecutar express
@@ -102,4 +105,6 @@ app.use("/api/promocion", promocionesRoutes);
 app.use("/api/repartidor", repartidoresRoutes);
 //VENDEDORES
 app.use("/api/vendedor", vendedoresRoutes);
+//WOMPI
+app.use("/api/wompi", wompiRoutes);
 export default app; 

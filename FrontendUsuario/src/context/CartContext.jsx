@@ -119,12 +119,12 @@ export const CartProvider = ({ children }) => {
     cartLoadedRef.current = false;
   };
 
-  const checkout = async (tipoPago) => {
+  const checkout = async (tipoPago, extras = {}) => {
     if (!cartId) throw new Error('No hay carrito para procesar');
     const currentCartId = cartId;
 
     // 1. Crear pedido (el carrito se mantiene como historial)
-    await api.createOrder(currentCartId, tipoPago);
+    await api.createOrder(currentCartId, tipoPago, extras);
 
     // 2. Limpiar carrito en frontend
     clearCart();

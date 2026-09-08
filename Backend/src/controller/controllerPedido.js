@@ -189,7 +189,7 @@ pedidosController.getPedidosById = async (req, res) => {
  */
 pedidosController.insertPedidos = async (req, res) => {
     try {
-        const { idCarrito, tipoPago } = req.body;
+        const { idCarrito, tipoPago, idTransaccionWompi, codigoAutorizacion, estadoPago } = req.body;
 
         if (!idCarrito) {
             return res.status(400).json({ message: "Se requiere idCarrito" });
@@ -202,7 +202,11 @@ pedidosController.insertPedidos = async (req, res) => {
         const newPedido = new pedidosModel({
             numeroPedido: nextNumber,
             idCarrito,
-            tipoPago: tipoPago || "card"
+            tipoPago: tipoPago || "card",
+            // Datos del cobro Wompi (opcionales, solo pagos con tarjeta)
+            ...(idTransaccionWompi ? { idTransaccionWompi } : {}),
+            ...(codigoAutorizacion ? { codigoAutorizacion } : {}),
+            ...(estadoPago ? { estadoPago } : {}),
         });
 
         await newPedido.save();
