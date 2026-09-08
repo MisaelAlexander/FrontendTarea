@@ -23,6 +23,7 @@ const Pagos = () => {
     setIsPlazos,             // Función para toggle plazos
     loading,                 // Estado de procesamiento
     orderData,               // Datos del pedido (entrega, dirección)
+    cardName, setCardName,
     cardNumber, setCardNumber,
     expDate, setExpDate,
     cvc, setCvc,
@@ -101,6 +102,16 @@ const Pagos = () => {
                   {/* Formulario de tarjeta (solo visible si está seleccionada) */}
                   {paymentMethod === 'card' && (
                     <div className="mt-4 space-y-4 animate-in fade-in">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del titular</label>
+                        <input
+                          type="text"
+                          placeholder="Como aparece en la tarjeta"
+                          value={cardName}
+                          onChange={(e) => setCardName(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2596be]"
+                        />
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Numero de Tarjeta</label>
                         <input

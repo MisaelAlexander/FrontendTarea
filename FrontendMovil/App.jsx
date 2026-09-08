@@ -66,7 +66,7 @@ function Tabs() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Techne Meraki</Text>
-        <TouchableOpacity onPress={doLogout}><Text style={styles.headerLink}>Salir ({user.nombre})</Text></TouchableOpacity>
+        <TouchableOpacity onPress={doLogout}><Text style={styles.headerLink}>Salir</Text></TouchableOpacity>
       </View>
 
       <View style={{ flex: 1 }}>

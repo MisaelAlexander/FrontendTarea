@@ -9,6 +9,7 @@ export default function CartScreen() {
   const { user } = useAuth();
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState('card');
+  const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expDate, setExpDate] = useState('');
   const [cvc, setCvc] = useState('');
@@ -28,6 +29,7 @@ export default function CartScreen() {
 
   const payCard = async () => {
     if (cartItems.length === 0) return;
+    if (!cardName.trim()) return Alert.alert('Falta el titular', 'Ingresa el nombre del propietario de la tarjeta');
     const digits = cardNumber.replace(/\D/g, '');
     if (digits.length < 15) return Alert.alert('Tarjeta inválida', 'Revisa el número de tarjeta');
     const m = expDate.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
@@ -44,7 +46,7 @@ export default function CartScreen() {
       const cobro = await api.wompiCobro({
         monto: Number(total),
         emailCliente,
-        nombreCliente,
+        nombreCliente: cardName.trim(),
         tarjeta: {
           numeroTarjeta: digits,
           cvv: cvc.trim(),
@@ -64,6 +66,7 @@ export default function CartScreen() {
         codigoAutorizacion: cobro.codigoAutorizacion,
         estadoPago: 'aprobada',
       });
+      setCardName('');
       setCardNumber('');
       setExpDate('');
       setCvc('');
@@ -121,6 +124,13 @@ export default function CartScreen() {
           <View style={styles.cardBox}>
             <TextInput
               style={styles.input}
+              placeholder="Nombre del titular"
+              autoCapitalize="words"
+              value={cardName}
+              onChangeText={setCardName}
+            />
+            <TextInput
+              style={styles.input}
               placeholder="Número de tarjeta"
               keyboardType="numeric"
               maxLength={19}
@@ -146,7 +156,7 @@ export default function CartScreen() {
               />
             </View>
             <TouchableOpacity style={styles.pay} disabled={paying || cartItems.length === 0} onPress={payCard}>
-              <Text style={styles.payTxt}>{paying ? 'Procesando...' : `Pagar $${total.toFixed(2)} con Wompi`}</Text>
+              <Text style={styles.payTxt}>{paying ? 'Procesando...' : `Pagar $${total.toFixed(2)}`}</Text>
             </TouchableOpacity>
           </View>
         ) : (

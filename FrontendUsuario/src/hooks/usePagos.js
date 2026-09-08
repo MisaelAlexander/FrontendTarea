@@ -29,6 +29,7 @@ export function usePagos() {
   const [orderData, setOrderData] = useState(null);
 
   // Formulario de tarjeta (cargo directo Wompi)
+  const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [expDate, setExpDate] = useState('');
   const [cvc, setCvc] = useState('');
@@ -71,6 +72,10 @@ export function usePagos() {
    * Cobra con tarjeta vía Wompi (cargo directo) y luego crea el pedido.
    */
   const payWithCard = async () => {
+    if (!cardName.trim()) {
+      toast.warning('Ingresa el nombre del titular de la tarjeta');
+      return;
+    }
     const digits = cardNumber.replace(/\D/g, '');
     if (digits.length < 15) {
       toast.warning('Número de tarjeta inválido');
@@ -106,7 +111,7 @@ export function usePagos() {
     const cobro = await api.wompiCobro({
       monto: Number(total),
       emailCliente,
-      nombreCliente,
+      nombreCliente: cardName.trim(),
       tarjeta: {
         numeroTarjeta: digits,
         cvv: cvc.trim(),
@@ -169,6 +174,7 @@ export function usePagos() {
     setIsPlazos,             // Setter de plazos
     loading,                 // Estado de procesamiento
     orderData,               // Datos del pedido desde localStorage
+    cardName, setCardName,
     cardNumber, setCardNumber,
     expDate, setExpDate,
     cvc, setCvc,

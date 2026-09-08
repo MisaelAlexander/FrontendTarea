@@ -162,6 +162,15 @@ const api = {
     const all = await handle(res, 'Error al obtener comentarios');
     return all.filter((c) => c.IDProductos?._id === productId || c.IDProductos === productId);
   },
+
+  async createComment(Titulo, CuerpoComentario, Resenia, IDCliente, IDProductos) {
+    const res = await fetch(`${API_BASE}/comentario`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ Titulo, CuerpoComentario, Resenia, IDCliente, IDProductos }),
+    });
+    return handle(res, 'Error al crear comentario');
+  },
 };
 
 export default api;
