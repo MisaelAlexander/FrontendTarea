@@ -39,8 +39,14 @@ export function AuthProvider({ children }) {
     await persist(null);
   };
 
+  const refreshUser = async (patch) => {
+    const next = { ...user, ...patch };
+    await persist(next);
+    return next;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

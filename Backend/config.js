@@ -13,7 +13,11 @@ export const config = {
     },
     email:{
         user_email: process.env.USER_EMAIL,
-        user_password: process.env.USER_PASSWORD
+        user_password: process.env.USER_PASSWORD,
+        apiKey: process.env.MAILJET_API_KEY,
+        apiSecret: process.env.MAILJET_SECRET_KEY,
+        from_email: process.env.MAILJET_FROM_EMAIL,
+        from_name: process.env.MAILJET_FROM_NAME
     },
     cloudinary:{
         cloudinary_name: process.env.CLOUDINARY_CLOUD_NAME,

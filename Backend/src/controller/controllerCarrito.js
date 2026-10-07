@@ -8,6 +8,51 @@ const carritoController = {};
 import carritoModel from "../models/Carrito.js";
 import productosModel from "../models/Productos.js";
 
+const fail = (status, message) => {
+    const e = new Error(message);
+    e.status = status;
+    throw e;
+};
+
+// Valida items, calcula subtotales y controla inventario.
+// Lanza error con .status (400/404) si algo no cumple.
+const buildProductos = async (Productos) => {
+    if (!Array.isArray(Productos) || Productos.length === 0) {
+        fail(400, "El carrito debe tener al menos un producto");
+    }
+
+    let total = 0;
+    const nuevosProductos = [];
+
+    for (const item of Productos) {
+        const amount = Number(item.amount);
+        if (!Number.isInteger(amount) || amount <= 0) {
+            fail(400, "La cantidad debe ser un número entero mayor a cero");
+        }
+
+        const productoEncontrado = await productosModel.findById(item.IDProducto);
+        if (!productoEncontrado) {
+            fail(404, `Producto ${item.IDProducto} no encontrado`);
+        }
+
+        if (productoEncontrado.stock < amount) {
+            fail(400, `Stock insuficiente para "${productoEncontrado.nombre}". Disponible: ${productoEncontrado.stock}`);
+        }
+
+        const subtotal = productoEncontrado.precio * amount;
+        total += subtotal;
+        nuevosProductos.push({ IDProducto: item.IDProducto, amount, subtotal });
+    }
+
+    return { nuevosProductos, total };
+};
+
+const sendError = (res, error) => {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    console.log("Error: " + error);
+    return res.status(500).json({ message: "Internal server error", error });
+};
+
 /**
  * GET - Obtener todos los carritos.
  * Populate: cliente (nombre, email) y productos (nombre, precio, imágenes, stock, descuento).
@@ -54,27 +99,8 @@ carritoController.insertCarrito = async (req, res) => {
     try {
         const { IDCliente, Productos, Descuento } = req.body;
 
-        // Calcular subtotales, total y totalConDescuento
-        let total = 0;
-        let nuevosProductos = [];
-
-        for (let i = 0; i < Productos.length; i++) {
-            // Buscar el producto en la base de datos para obtener su precio
-            const productoEncontrado = await productosModel.findById(Productos[i].IDProducto);
-            if (!productoEncontrado) {
-                return res.status(404).json({ message: `Producto ${Productos[i].IDProducto} no encontrado` });
-            }
-
-            // Calcular subtotal para este producto (precio × cantidad)
-            const subtotal = productoEncontrado.precio * Productos[i].amount;
-            total += subtotal;
-
-            nuevosProductos.push({
-                IDProducto: Productos[i].IDProducto,
-                amount: Productos[i].amount,
-                subtotal: subtotal
-            });
-        }
+        // Valida cantidades/stock y calcula subtotales y total
+        const { nuevosProductos, total } = await buildProductos(Productos);
 
         // Calcular total con descuento (si hay descuento)
         let totalConDescuento = total;
@@ -93,8 +119,7 @@ carritoController.insertCarrito = async (req, res) => {
         await nuevoCarrito.save();
         return res.status(200).json({ message: "Carrito creado", carrito: nuevoCarrito });
     } catch (error) {
-        console.log("Error: " + error);
-        return res.status(500).json({ message: "Internal server error", error });
+        return sendError(res, error);
     }
 }
 
@@ -107,25 +132,8 @@ carritoController.updateCarrito = async (req, res) => {
     try {
         const { IDCliente, Productos, Descuento } = req.body;
 
-        // Recalcular subtotales, total y totalConDescuento
-        let total = 0;
-        let nuevosProductos = [];
-
-        for (let i = 0; i < Productos.length; i++) {
-            const productoEncontrado = await productosModel.findById(Productos[i].IDProducto);
-            if (!productoEncontrado) {
-                return res.status(404).json({ message: `Producto ${Productos[i].IDProducto} no encontrado` });
-            }
-
-            const subtotal = productoEncontrado.precio * Productos[i].amount;
-            total += subtotal;
-
-            nuevosProductos.push({
-                IDProducto: Productos[i].IDProducto,
-                amount: Productos[i].amount,
-                subtotal: subtotal
-            });
-        }
+        // Recalcular subtotales, total y totalConDescuento (valida cantidades/stock)
+        const { nuevosProductos, total } = await buildProductos(Productos);
 
         let totalConDescuento = total;
         if (Descuento && Descuento > 0) {
@@ -149,8 +157,7 @@ carritoController.updateCarrito = async (req, res) => {
         }
         return res.status(200).json({ message: "Carrito actualizado" });
     } catch (error) {
-        console.log("Error: " + error);
-        return res.status(500).json({ message: "Internal server error", error });
+        return sendError(res, error);
     }
 }
 

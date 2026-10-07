@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { validateLogin } from '../utils/validators';
 
-export default function LoginScreen({ onGoRegister, onLogged }) {
+export default function LoginScreen({ onGoRegister, onGoRecovery, onLogged }) {
   const { login } = useAuth();
   const { loadCart } = useCart();
   const [usuario, setUsuario] = useState('');
@@ -11,7 +12,8 @@ export default function LoginScreen({ onGoRegister, onLogged }) {
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (!usuario || !password) return Alert.alert('Faltan datos', 'Escribe usuario y contraseña');
+    const err = validateLogin(usuario, password);
+    if (err) return Alert.alert('Faltan datos', err);
     setLoading(true);
     try {
       const data = await login(usuario.trim(), password);
@@ -34,6 +36,7 @@ export default function LoginScreen({ onGoRegister, onLogged }) {
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnTxt}>Entrar</Text>}
       </TouchableOpacity>
       <TouchableOpacity onPress={onGoRegister}><Text style={styles.link}>¿Sin cuenta? Regístrate</Text></TouchableOpacity>
+      <TouchableOpacity onPress={onGoRecovery}><Text style={styles.link}>¿Olvidaste tu contraseña?</Text></TouchableOpacity>
     </View>
   );
 }

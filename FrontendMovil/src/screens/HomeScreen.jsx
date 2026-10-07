@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, TextInput, ActivityIndicator, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TextInput, ActivityIndicator, StyleSheet, RefreshControl, Alert } from 'react-native';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import ProductCard from '../components/ProductCard';
+import { canPurchase } from '../utils/validators';
 
 export default function HomeScreen({ onViewProduct }) {
   const { user } = useAuth();
@@ -74,7 +75,11 @@ export default function HomeScreen({ onViewProduct }) {
             product={item}
             isFav={favs.includes(item._id)}
             onToggleFav={toggleFav}
-            onAdd={(p) => { if (user?.id) addToCart(p); }}
+            onAdd={(p) => {
+              if (!user?.id) return;
+              if (!canPurchase(p)) return Alert.alert('Sin stock', 'Este producto no está disponible');
+              addToCart(p);
+            }}
             onView={onViewProduct}
           />
         )}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import api from '../api/client';
+import { validateComment, canPurchase, stockOf } from '../utils/validators';
 
 export default function ProductDetailScreen({ product, onBack, onGoCart }) {
   const { user } = useAuth();
@@ -24,7 +25,8 @@ export default function ProductDetailScreen({ product, onBack, onGoCart }) {
 
   const submitComment = async () => {
     if (!user?.id) return;
-    if (text.trim().length < 3) return Alert.alert('Comentario muy corto', 'Escribe al menos 3 caracteres');
+    const commentErr = validateComment(text, rating);
+    if (commentErr) return Alert.alert('Revisa tu reseña', commentErr);
     setSending(true);
     try {
       await api.createComment('Comentario', text.trim(), rating, user.id, product._id);
@@ -55,10 +57,17 @@ export default function ProductDetailScreen({ product, onBack, onGoCart }) {
         <Text style={styles.desc}>{product.descripcion}</Text>
         {product.colores?.length > 0 && <Text style={styles.cat}>Colores: {product.colores.join(', ')}</Text>}
         <TouchableOpacity
-          style={styles.btn}
-          onPress={() => { if (user?.id) { addToCart(product); onGoCart?.(); } }}
+          style={[styles.btn, !canPurchase(product) && styles.btnDisabled]}
+          onPress={() => {
+            if (!user?.id) return;
+            if (!canPurchase(product)) return Alert.alert('Sin stock', 'Este producto no está disponible');
+            addToCart(product);
+            onGoCart?.();
+          }}
         >
-          <Text style={styles.btnTxt}>{user ? 'Agregar al carrito' : 'Inicia sesión para comprar'}</Text>
+          <Text style={styles.btnTxt}>
+            {!user ? 'Inicia sesión para comprar' : !canPurchase(product) ? `Sin stock (${stockOf(product)})` : 'Agregar al carrito'}
+          </Text>
         </TouchableOpacity>
 
         <Text style={styles.section}>Reseñas</Text>
@@ -119,6 +128,7 @@ const styles = StyleSheet.create({
   stock: { marginTop: 4, color: '#444' },
   desc: { marginTop: 12, lineHeight: 20, color: '#333' },
   btn: { backgroundColor: '#2596be', borderRadius: 12, padding: 14, marginTop: 20, alignItems: 'center' },
+  btnDisabled: { backgroundColor: '#9ca3af' },
   btnTxt: { color: '#fff', fontWeight: '800' },
   section: { fontSize: 18, fontWeight: '800', marginTop: 24, marginBottom: 8 },
   muted: { color: '#666', marginBottom: 8 },

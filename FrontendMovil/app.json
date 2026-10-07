@@ -4,21 +4,34 @@
     "slug": "techne-meraki-movil",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/imagen_2026-10-06_194648562-removebg-preview.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/imagen_2026-10-06_194648562-removebg-preview.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/imagen_2026-10-06_194648562-removebg-preview.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/imagen_2026-10-06_194648562-removebg-preview.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/imagen_2026-10-06_194648562-removebg-preview.png",
+          "imageWidth": 200
+        }
+      ]
+    ]
   }
 }

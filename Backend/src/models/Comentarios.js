@@ -17,6 +17,8 @@ const ComentariosSchema = new Schema(
     // Calificación del 1 al 5
     Resenia: {
       type: Number,
+      min: 1,
+      max: 5,
     },
     // Referencia al cliente que escribió el comentario
     IDCliente: {

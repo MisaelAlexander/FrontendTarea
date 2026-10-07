@@ -5,6 +5,8 @@ export const API_BASE =
 
 // Token del registro en curso (el móvil no maneja cookies httpOnly)
 let pendingVerificationToken = null;
+// Token del flujo de recuperación (paso 1 -> 2 -> 3)
+let recoveryToken = null;
 
 async function handle(res, fallbackMsg) {
   const data = await res.json().catch(() => ({}));
@@ -57,7 +59,40 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ correo }),
     });
-    return handle(res, 'Error al solicitar código');
+    const data = await handle(res, 'Error al solicitar código');
+    recoveryToken = data.recoveryToken || null;
+    return data;
+  },
+
+  async verifyRecoveryCode(code) {
+    const res = await fetch(`${API_BASE}/recuperar-cliente/verify-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ codeRequest: code, recoveryToken }),
+    });
+    const data = await handle(res, 'Código inválido');
+    if (data.recoveryToken) recoveryToken = data.recoveryToken;
+    return data;
+  },
+
+  async setNewPassword(newPassword, confirmNewPassword) {
+    const res = await fetch(`${API_BASE}/recuperar-cliente/new-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword, confirmNewPassword, recoveryToken }),
+    });
+    const data = await handle(res, 'Error al actualizar contraseña');
+    recoveryToken = null;
+    return data;
+  },
+
+  async updateClient(clientId, data) {
+    const res = await fetch(`${API_BASE}/cliente/${clientId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handle(res, 'Error al actualizar perfil');
   },
 
   async getProducts() {
@@ -108,6 +143,9 @@ const api = {
   },
 
   async createCart(IDCliente, Productos, Descuento = 0) {
+    if (!Array.isArray(Productos) || Productos.length === 0) {
+      throw new Error('El carrito debe tener al menos un producto');
+    }
     const res = await fetch(`${API_BASE}/carrito`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -117,12 +155,22 @@ const api = {
   },
 
   async updateCart(cartId, IDCliente, Productos, Descuento = 0) {
+    if (!Array.isArray(Productos) || Productos.length === 0) {
+      throw new Error('El carrito debe tener al menos un producto');
+    }
     const res = await fetch(`${API_BASE}/carrito/${cartId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ IDCliente, Productos, Descuento }),
     });
     return handle(res, 'Error al actualizar carrito');
+  },
+
+  async deleteCart(cartId) {
+    if (!cartId) return null;
+    const res = await fetch(`${API_BASE}/carrito/${cartId}`, { method: 'DELETE' });
+    if (res.status === 404) return null;
+    return handle(res, 'Error al eliminar carrito');
   },
 
   async createOrder(cartId, tipoPago = 'card', extras = {}) {

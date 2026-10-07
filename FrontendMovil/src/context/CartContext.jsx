@@ -9,14 +9,19 @@ export const useCart = () => {
   return ctx;
 };
 
+const numOr = (v, fallback) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
 const toItem = (prod, quantity) => ({
   id: prod._id,
   title: prod.nombre || 'Producto',
-  price: Number(prod.precio) || 0,
+  price: numOr(prod.precio, 0),
   image: prod.imagenesProductos?.[0]?.imagen || '',
   quantity,
-  stock: Number(prod.stock) || 99,
-  descuento: Number(prod.descuento) || 0,
+  stock: numOr(prod.stock, 99),
+  descuento: numOr(prod.descuento, 0),
   originalProduct: prod,
 });
 
@@ -52,8 +57,15 @@ export const CartProvider = ({ children }) => {
     if (!cId) return;
     const productos = items.map((i) => ({ IDProducto: i.id, amount: i.quantity }));
     try {
-      if (id) await api.updateCart(id, cId, productos);
-      else if (productos.length > 0) {
+      if (productos.length === 0) {
+        // Vacío: eliminar en el servidor en vez de mandar un PUT vacío (la API lo rechaza).
+        if (id) {
+          await api.deleteCart(id);
+          setCartId(null);
+        }
+      } else if (id) {
+        await api.updateCart(id, cId, productos);
+      } else {
         const result = await api.createCart(cId, productos);
         if (result?.carrito?._id) setCartId(result.carrito._id);
       }
@@ -64,21 +76,23 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product, quantity = 1) => {
     const pid = product._id || product.id;
+    const stock = numOr(product.stock, 99);
+    if (!product.nombre || stock < 1 || quantity < 1) return false;
+    let added = false;
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === pid);
       let next;
       if (existing) {
-        next = prev.map((i) =>
-          i.id === pid ? { ...i, quantity: Math.min(i.stock, i.quantity + quantity) } : i
-        );
+        if (existing.quantity + quantity > existing.stock) return prev;
+        next = prev.map((i) => (i.id === pid ? { ...i, quantity: i.quantity + quantity } : i));
       } else {
-        const base = product.nombre ? toItem(product, Math.min(Number(product.stock) || 1, quantity)) : null;
-        if (!base) return prev;
-        next = [...prev, base];
+        next = [...prev, toItem(product, Math.min(stock, quantity))];
       }
+      added = true;
       syncCart(next, cartId, clientId);
       return next;
     });
+    return added;
   };
 
   const updateQuantity = (id, change) => {
@@ -108,8 +122,23 @@ export const CartProvider = ({ children }) => {
     setCartId(null);
   };
 
+  // Revalida stock con datos frescos antes de crear el pedido.
+  const revalidateStock = async (items) => {
+    for (const i of items) {
+      const fresh = await api.getProductById(i.id);
+      const stock = Number(fresh?.stock);
+      if (!Number.isFinite(stock) || stock < i.quantity) {
+        throw new Error(
+          `Stock insuficiente para "${i.title}". Disponible: ${Number.isFinite(stock) ? stock : 0}`
+        );
+      }
+    }
+  };
+
   const checkout = async (tipoPago = 'card', extras = {}) => {
     if (!cartId) throw new Error('No hay carrito para procesar');
+    if (cartItems.length === 0) throw new Error('El carrito está vacío');
+    await revalidateStock(cartItems);
     await api.createOrder(cartId, tipoPago, extras);
     clearCart();
   };

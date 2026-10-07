@@ -2,7 +2,7 @@
 import jsonwebtoken from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../../utils/sendMailjet.js";
 import HTMLRecoveryEmail from "../../utils/sendMailRecovery.js";
 import { config } from "../../../config.js";
 import clientesModel from "../../models/Clientes.js";
@@ -29,28 +29,18 @@ recoveryPasswordClienteController.requestCode = async (req, res) => {
 
     res.cookie("recoveryCookieCliente", token, { maxAge: 15 * 60 * 1000 });
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: config.email.user_email,
-        pass: config.email.user_password,
-      },
-    });
-
-    const mailOptions = {
-      from: config.email.user_email,
-      to: correo,
-      subject: "Recuperación de contraseña - Cliente",
-      html: HTMLRecoveryEmail(code),
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("Error enviando correo: " + error);
-        return res.status(500).json({ message: "Error al enviar el correo" });
-      }
-      return res.status(200).json({ message: "Correo enviado" });
-    });
+    try {
+      await sendEmail({
+        to: correo,
+        subject: "Recuperación de contraseña - Cliente",
+        html: HTMLRecoveryEmail(code),
+      });
+    } catch (error) {
+      console.log("Error enviando correo: " + error);
+      return res.status(500).json({ message: "Error al enviar el correo" });
+    }
+    // El token también viaja en el cuerpo para clientes sin cookies (móvil / cross-site).
+    return res.status(200).json({ message: "Correo enviado", recoveryToken: token });
   } catch (error) {
     console.log("Error en requestCode: " + error);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -60,8 +50,8 @@ recoveryPasswordClienteController.requestCode = async (req, res) => {
 // Paso 2: Verificar código
 recoveryPasswordClienteController.verifyCode = async (req, res) => {
   try {
-    const { codeRequest } = req.body;
-    const token = req.cookies.recoveryCookieCliente;
+    const { codeRequest, recoveryToken } = req.body;
+    const token = recoveryToken || req.cookies?.recoveryCookieCliente;
     if (!token) {
       return res.status(400).json({ message: "No hay solicitud activa" });
     }
@@ -77,7 +67,7 @@ recoveryPasswordClienteController.verifyCode = async (req, res) => {
       { expiresIn: "15m" }
     );
     res.cookie("recoveryCookieCliente", newToken, { maxAge: 15 * 60 * 1000 });
-    return res.status(200).json({ message: "Código verificado correctamente" });
+    return res.status(200).json({ message: "Código verificado correctamente", recoveryToken: newToken });
   } catch (error) {
     console.log("Error en verifyCode: " + error);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -87,12 +77,15 @@ recoveryPasswordClienteController.verifyCode = async (req, res) => {
 // Paso 3: Nueva contraseña
 recoveryPasswordClienteController.newPassword = async (req, res) => {
   try {
-    const { newPassword, confirmNewPassword } = req.body;
+    const { newPassword, confirmNewPassword, recoveryToken } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: "La contraseña debe tener al menos 6 caracteres" });
+    }
     if (newPassword !== confirmNewPassword) {
       return res.status(400).json({ message: "Las contraseñas no coinciden" });
     }
 
-    const token = req.cookies.recoveryCookieCliente;
+    const token = recoveryToken || req.cookies?.recoveryCookieCliente;
     if (!token) {
       return res.status(400).json({ message: "No hay solicitud activa" });
     }

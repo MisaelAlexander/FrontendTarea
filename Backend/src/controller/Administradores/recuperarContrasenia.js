@@ -1,7 +1,7 @@
 import jsonwebtoken from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../../utils/sendMailjet.js";
 import HTMLRecoveryEmail from "../../utils/sendMailRecovery.js";
 
 import { config } from "../../../config.js";
@@ -36,30 +36,18 @@ recoveryPasswordAdminController.requestCode = async (req, res) => {
     // Establecer la cookie con el token
     res.cookie("recoveryCookieAdmin", token, { maxAge: 15 * 60 * 1000 });
 
-    // Configurar el transportador de correo
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: config.email.user_email,
-        pass: config.email.user_password,
-      },
-    });
-
-    const mailOptions = {
-      from: config.email.user_email,
-      to: correo,
-      subject: "Recuperación de contraseña - Administrador",
-      html: HTMLRecoveryEmail(code),
-    };
-
-    // Enviar el correo
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("Error enviando correo: " + error);
-        return res.status(500).json({ message: "Error al enviar el correo" });
-      }
-      return res.status(200).json({ message: "Correo enviado" });
-    });
+    // Enviar el correo con Mailjet
+    try {
+      await sendEmail({
+        to: correo,
+        subject: "Recuperación de contraseña - Administrador",
+        html: HTMLRecoveryEmail(code),
+      });
+    } catch (error) {
+      console.log("Error enviando correo: " + error);
+      return res.status(500).json({ message: "Error al enviar el correo" });
+    }
+    return res.status(200).json({ message: "Correo enviado" });
   } catch (error) {
     console.log("Error en requestCode: " + error);
     return res.status(500).json({ message: "Error interno del servidor" });

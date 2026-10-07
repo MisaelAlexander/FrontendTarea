@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import api from '../api/client';
+import { validateRegister } from '../utils/validators';
 
 export default function RegisterScreen({ onGoLogin, onRegistered }) {
   const [form, setForm] = useState({ nombre: '', apellido: '', usuario: '', password: '', correo: '' });
@@ -10,7 +11,8 @@ export default function RegisterScreen({ onGoLogin, onRegistered }) {
 
   const submit = async () => {
     const { nombre, apellido, usuario, password, correo } = form;
-    if (!nombre || !apellido || !usuario || !password || !correo) return Alert.alert('Faltan datos', 'Completa todos los campos');
+    const err = validateRegister(form);
+    if (err) return Alert.alert('Revisa tus datos', err);
     setLoading(true);
     try {
       await api.register(nombre, apellido, usuario, password, correo);

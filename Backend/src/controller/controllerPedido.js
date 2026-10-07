@@ -195,6 +195,30 @@ pedidosController.insertPedidos = async (req, res) => {
             return res.status(400).json({ message: "Se requiere idCarrito" });
         }
 
+        const carrito = await carritosModel.findById(idCarrito);
+        if (!carrito) {
+            return res.status(404).json({ message: "Carrito no encontrado" });
+        }
+        if (!carrito.Productos || carrito.Productos.length === 0) {
+            return res.status(400).json({ message: "El carrito está vacío" });
+        }
+
+        // Control de inventario: verifica y descuenta stock de forma atómica.
+        // Si un producto no tiene stock suficiente, el pedido se rechaza completo.
+        for (const item of carrito.Productos) {
+            const amount = Number(item.amount) || 0;
+            if (amount <= 0) {
+                return res.status(400).json({ message: "El carrito tiene cantidades inválidas" });
+            }
+            const descontado = await productosModel.findOneAndUpdate(
+                { _id: item.IDProducto, stock: { $gte: amount } },
+                { $inc: { stock: -amount } }
+            );
+            if (!descontado) {
+                return res.status(400).json({ message: "Stock insuficiente para completar el pedido" });
+            }
+        }
+
         // Obtener el último número de pedido para generar el siguiente
         const lastPedido = await pedidosModel.findOne({ numeroPedido: { $exists: true, $ne: null } }).sort({ numeroPedido: -1 });
         const nextNumber = lastPedido ? (lastPedido.numeroPedido || 0) + 1 : 1;

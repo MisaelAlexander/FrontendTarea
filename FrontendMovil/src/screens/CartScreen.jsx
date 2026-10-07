@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
+import { validateCard } from '../utils/validators';
 
 export default function CartScreen() {
   const { cartItems, cartId, updateQuantity, removeItem, total, totalItems, checkout } = useCart();
@@ -29,12 +30,10 @@ export default function CartScreen() {
 
   const payCard = async () => {
     if (cartItems.length === 0) return;
-    if (!cardName.trim()) return Alert.alert('Falta el titular', 'Ingresa el nombre del propietario de la tarjeta');
+    const cardErr = validateCard({ name: cardName, number: cardNumber, exp: expDate, cvc });
+    if (cardErr) return Alert.alert('Revisa la tarjeta', cardErr);
     const digits = cardNumber.replace(/\D/g, '');
-    if (digits.length < 15) return Alert.alert('Tarjeta inválida', 'Revisa el número de tarjeta');
     const m = expDate.match(/^(0[1-9]|1[0-2])\/(\d{2})$/);
-    if (!m) return Alert.alert('Fecha inválida', 'Usa formato MM/AA');
-    if (!/^\d{3,4}$/.test(cvc.trim())) return Alert.alert('CVC inválido', 'Revisa el código de seguridad');
 
     setPaying(true);
     try {

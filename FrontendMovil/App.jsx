@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Image, ActivityIndicator } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { CartProvider, useCart } from './src/context/CartContext';
 import HomeScreen from './src/screens/HomeScreen';
@@ -10,6 +11,10 @@ import OrdersScreen from './src/screens/OrdersScreen';
 import FavoritesScreen from './src/screens/FavoritesScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import RecoveryScreen from './src/screens/RecoveryScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function Tabs() {
   const { user, loading, logout } = useAuth();
@@ -22,6 +27,10 @@ function Tabs() {
     if (user?.id) loadCart(user.id);
   }, [user]);
 
+  useEffect(() => {
+    if (!loading) SplashScreen.hideAsync().catch(() => {});
+  }, [loading]);
+
   const doLogout = async () => {
     await logout();
     clearCart();
@@ -31,7 +40,17 @@ function Tabs() {
   };
 
   if (loading) {
-    return <View style={styles.center}><Text>Cargando...</Text></View>;
+    return (
+      <View style={styles.splash}>
+        <Image
+          source={require('./assets/imagen_2026-10-06_194648562-removebg-preview.png')}
+          style={styles.splashLogo}
+          resizeMode="contain"
+        />
+        <Text style={styles.splashTitle}>Techne Meraki</Text>
+        <ActivityIndicator size="large" color="#2596be" style={{ marginTop: 16 }} />
+      </View>
+    );
   }
 
   // Si hay producto seleccionado, mostrar detalle encima
@@ -53,9 +72,15 @@ function Tabs() {
     return (
       <SafeAreaView style={styles.container}>
         {authView === 'login' ? (
-          <LoginScreen onGoRegister={() => setAuthView('register')} onLogged={() => setTab('home')} />
-        ) : (
+          <LoginScreen
+            onGoRegister={() => setAuthView('register')}
+            onGoRecovery={() => setAuthView('recovery')}
+            onLogged={() => setTab('home')}
+          />
+        ) : authView === 'register' ? (
           <RegisterScreen onGoLogin={() => setAuthView('login')} onRegistered={() => setAuthView('login')} />
+        ) : (
+          <RecoveryScreen onGoLogin={() => setAuthView('login')} />
         )}
         <StatusBar style="auto" />
       </SafeAreaView>
@@ -74,6 +99,7 @@ function Tabs() {
         {tab === 'cart' && <CartScreen />}
         {tab === 'orders' && <OrdersScreen />}
         {tab === 'favs' && <FavoritesScreen onViewProduct={setSelectedProduct} />}
+        {tab === 'profile' && <ProfileScreen />}
       </View>
 
       <BottomBar tab={tab} setTab={setTab} totalItems={totalItems} user={user} />
@@ -89,6 +115,7 @@ function BottomBar({ tab, setTab }) {
     { id: 'favs', label: 'Favs' },
     { id: 'cart', label: totalItems > 0 ? `Carrito (${totalItems})` : 'Carrito' },
     { id: 'orders', label: 'Pedidos' },
+    { id: 'profile', label: 'Perfil' },
   ];
   return (
     <View style={styles.bar}>
@@ -114,6 +141,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f3f4f6' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  splash: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  splashLogo: { width: 180, height: 180 },
+  splashTitle: { fontWeight: '900', fontSize: 24, color: '#2596be', marginTop: 12 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, backgroundColor: '#fff', elevation: 2 },
   headerTitle: { fontWeight: '900', fontSize: 18, color: '#2596be' },
   headerLink: { color: '#2596be', fontWeight: '700' },
