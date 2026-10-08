@@ -5,21 +5,23 @@
  */
 const HTMLRecoveryEmail = (code) => {
   return `
-      <div style="font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2c3e50; font-size: 24px; margin-bottom: 20px;">Password Recovery</h1>
-        <p style="font-size: 16px; color: #555; line-height: 1.5;">
+      <div style="font-family: Arial, sans-serif; text-align: center; background-color: #E6F4FE; padding: 20px; border: 1px solid #bad4f8; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(90deg, #2596be, #1e7a9b); border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <h1 style="color: #ffffff; font-size: 24px; margin: 0;">Techne Meraki</h1>
+        </div>
+        <h2 style="color: #1a365d; font-size: 20px; margin-bottom: 20px;">Password Recovery</h2>
+        <p style="font-size: 16px; color: #1a365d; line-height: 1.5;">
           Hello, we received a request to reset your password. Use the verification code below to proceed:
         </p>
-        <div style="display: inline-block; padding: 10px 20px; margin: 20px 0; font-size: 18px; font-weight: bold; color: #fff; background-color: #ff7f50; border-radius: 5px; border: 1px solid #e67e22;">
+        <div style="display: inline-block; padding: 10px 20px; margin: 20px 0; font-size: 18px; font-weight: bold; color: #fff; background-color: #2596be; border-radius: 5px; border: 1px solid #1e7a9b;">
           ${code}
         </div>
-        <p style="font-size: 14px; color: #777; line-height: 1.5;">
+        <p style="font-size: 14px; color: #1a365d; line-height: 1.5;">
           This code is valid for the next <strong>15 minutes</strong>. If you didn't request this email, you can safely ignore it.
         </p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <footer style="font-size: 12px; color: #aaa;">
-          If you need further assistance, please contact our support team at
-          <a href="mailto:support@example.com" style="color: #3498db; text-decoration: none;">support@example.com</a>.
+        <hr style="border: none; border-top: 1px solid #bad4f8; margin: 20px 0;">
+        <footer style="font-size: 12px; color: #1a365d;">
+          If you need further assistance, please contact our support team.
         </footer>
       </div>
     `;
