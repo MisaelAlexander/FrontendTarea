@@ -16,7 +16,7 @@ recoveryPasswordClienteController.requestCode = async (req, res) => {
 
     const cliente = await clientesModel.findOne({ correo });
     if (!cliente) {
-      return res.json({ message: "Si el correo existe, recibirás un código" });
+      return res.status(404).json({ message: "Correo no encontrado" });
     }
 
     const code = crypto.randomBytes(3).toString("hex");

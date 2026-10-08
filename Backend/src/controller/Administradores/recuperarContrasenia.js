@@ -19,8 +19,7 @@ recoveryPasswordAdminController.requestCode = async (req, res) => {
     const adminFound = await administradoresModel.findOne({ correo: correo });
 
     if (!adminFound) {
-      // Por seguridad, no revelamos si existe o no
-      return res.json({ message: "No se ha encontrado tu correo" });
+      return res.status(404).json({ message: "Correo no encontrado" });
     }
 
     // Generar código aleatorio de 6 caracteres hexadecimales

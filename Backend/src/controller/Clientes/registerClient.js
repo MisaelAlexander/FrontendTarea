@@ -1,11 +1,14 @@
 import clientesModel from "../../models/Clientes.js";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { config } from "../../../config.js";
+import { sendEmail } from "../../utils/sendMailjet.js";
+import HTMLRegisterEmail from "../../utils/sendMailRegister.js";
 
 const registerClient = {};
 
-// Paso 1: Registro directo (sin correo de verificación)
+// Paso 1: Iniciar registro (envía código de 6 dígitos al correo)
 registerClient.register = async (req, res) => {
   try {
     const { nombre, apellido, usuario, contraseña, correo } = req.body;
@@ -23,22 +26,41 @@ registerClient.register = async (req, res) => {
       return res.status(400).json({ message: "El usuario o correo ya está registrado" });
     }
 
-    // Hashear contraseña
+    // Hashear contraseña antes de firmarla en el token
     const hashedPassword = await bcrypt.hash(contraseña, 10);
 
-    // Crear cliente directamente (sin verificación por correo)
-    const nuevoCliente = new clientesModel({
-      nombre,
-      apellido,
-      usuario,
-      contraseña: hashedPassword,
-      correo: correo.toLowerCase(),
-      isVerified: true,
-      Favoritos: [],
-    });
+    // Código de verificación de 6 dígitos
+    const verificationCode = String(crypto.randomInt(100000, 1000000));
 
-    await nuevoCliente.save();
-    res.status(201).json({ message: "Cuenta registrada exitosamente. Ya puedes iniciar sesión." });
+    // Token con los datos pendientes (expira en 15 minutos)
+    const token = jwt.sign(
+      {
+        nombre,
+        apellido,
+        usuario,
+        correo: correo.toLowerCase(),
+        password: hashedPassword,
+        verificationCode,
+      },
+      config.JWT.secret,
+      { expiresIn: "15m" }
+    );
+
+    res.cookie("clientVerificationToken", token, { maxAge: 15 * 60 * 1000 });
+
+    try {
+      await sendEmail({
+        to: correo,
+        subject: "Código de verificación - Techne Meraki",
+        html: HTMLRegisterEmail(verificationCode),
+      });
+    } catch (error) {
+      console.log("Error enviando correo: " + error);
+      return res.status(500).json({ message: "Error al enviar el correo" });
+    }
+
+    // El token también viaja en el cuerpo para clientes sin cookies (móvil / cross-site).
+    res.status(200).json({ message: "Código enviado a tu correo", verificationToken: token });
   } catch (error) {
     console.error("Error en registro:", error);
     if (error?.code === 11000) {

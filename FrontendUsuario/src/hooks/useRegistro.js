@@ -41,7 +41,7 @@ export function useRegistro() {
     setLoading(true);
     try {
       await api.register(data.nombre, data.apellido, data.usuario, data.password, data.correo);
-      navigate('/login');
+      setStep(2);
     } catch (err) {
       setError(err.message || 'Error al registrar');
     } finally {
@@ -54,8 +54,8 @@ export function useRegistro() {
     setError('');
     setLoading(true);
     try {
-      await api.verifyRegisterCode(verificationCode);
-      navigate('/');
+      await api.verifyRegisterCode(verificationCode.trim());
+      navigate('/login');
     } catch (err) {
       setError(err.message || 'Error al verificar codigo');
     } finally {

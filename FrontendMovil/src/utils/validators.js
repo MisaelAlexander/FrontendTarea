@@ -44,6 +44,13 @@ export function validateRecoveryEmail(correo) {
   return need(correo, 'El correo') || (!isEmail(correo) ? 'El correo no tiene un formato válido' : null);
 }
 
+export function validateRegisterCode(code) {
+  const c = String(code || '').trim();
+  if (!c) return 'El código es obligatorio';
+  if (!/^\d{6}$/.test(c)) return 'El código debe tener 6 dígitos';
+  return null;
+}
+
 export function validateRecoveryCode(code) {
   const c = String(code || '').trim();
   if (!c) return 'El código es obligatorio';
